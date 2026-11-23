@@ -1,0 +1,314 @@
+{
+  "styles": [
+    {
+      "id": "realistic",
+      "name": "真實寫真",
+      "en": "Photorealistic",
+      "filter": "contrast(1.15) saturate(1.2) brightness(1.02)",
+      "desc": "如單眼相機親臨現場般的高細節真實質感",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "japanese",
+      "name": "日式手繪",
+      "en": "Anime Sketch",
+      "filter": "sepia(0.2) contrast(1.2) brightness(1.1) saturate(1.1)",
+      "desc": "吉卜力式清新溫潤線條與細膩手感筆觸",
+      "color": "#ec4899"
+    },
+    {
+      "id": "3d_cartoon",
+      "name": "3D卡通",
+      "en": "3D Animation",
+      "filter": "saturate(1.6) contrast(1.25) brightness(1.05)",
+      "desc": "迪士尼與皮克斯風格立體飽滿立體動畫感",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "illustration",
+      "name": "手札插畫",
+      "en": "Journal Sketch",
+      "filter": "sepia(0.35) contrast(1.1) brightness(1.05)",
+      "desc": "溫暖手帳風，童趣而充滿溫度的旅行筆記",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "watercolor",
+      "name": "浪漫水彩",
+      "en": "Romantic Watercolor",
+      "filter": "saturate(1.3) brightness(1.12) contrast(0.95)",
+      "desc": "淡彩渲染層次豐富，如詩如畫的暈染夢幻感",
+      "color": "#06b6d4"
+    },
+    {
+      "id": "ink_wash",
+      "name": "中國水墨",
+      "en": "Chinese Ink Wash",
+      "filter": "grayscale(1) contrast(1.5) brightness(1.05)",
+      "desc": "東方意境深遠，濃淡乾濕的筆墨氣韻",
+      "color": "#64748b"
+    },
+    {
+      "id": "anime",
+      "name": "動漫插畫",
+      "en": "Comic Anime",
+      "filter": "contrast(1.3) saturate(1.5) brightness(1.08)",
+      "desc": "日系熱血青春動漫高彩度精緻作畫",
+      "color": "#ef4444"
+    },
+    {
+      "id": "cyberpunk",
+      "name": "賽博朋克",
+      "en": "Cyberpunk Neon",
+      "filter": "hue-rotate(180deg) saturate(1.8) contrast(1.4)",
+      "desc": "霓虹幻彩流光，未來科幻夜色美學",
+      "color": "#a855f7"
+    },
+    {
+      "id": "oil_painting",
+      "name": "古典油畫",
+      "en": "Classic Oil Painting",
+      "filter": "sepia(0.4) contrast(1.35) saturate(1.2)",
+      "desc": "文藝復興大師厚重油彩與光影對比",
+      "color": "#d97706"
+    },
+    {
+      "id": "american_comic",
+      "name": "美式漫畫",
+      "en": "American Comic",
+      "filter": "contrast(1.6) saturate(1.7) brightness(1.05)",
+      "desc": "漫威與 DC 美漫強烈線條與飽和視覺衝擊",
+      "color": "#dc2626"
+    }
+  ],
+  "locations": [
+    {
+      "id": "taiwan",
+      "name": "臺灣",
+      "symbol": "🇹🇼",
+      "desc": "日月潭清幽水色、九份老街山城與玉山壯闊雲海"
+    },
+    {
+      "id": "japan",
+      "name": "日本",
+      "symbol": "🇯🇵",
+      "desc": "京都古寺櫻花飛舞、富士山積雪盛景與東京街町"
+    },
+    {
+      "id": "china",
+      "name": "中國",
+      "symbol": "🇨🇳",
+      "desc": "萬里長城蜿蜒起伏、桂林漓江山水甲天下"
+    },
+    {
+      "id": "thailand",
+      "name": "泰國",
+      "symbol": "🇹🇭",
+      "desc": "曼谷大皇宮金色佛芒、普吉島熱帶陽光與水上市場"
+    },
+    {
+      "id": "usa",
+      "name": "美國",
+      "symbol": "🇺🇸",
+      "desc": "紐約時代廣場霓虹之夜、大峽谷壯麗地貌"
+    },
+    {
+      "id": "europe",
+      "name": "歐洲",
+      "symbol": "🇪🇺",
+      "desc": "巴黎艾菲爾鐵塔浪漫巡禮、阿爾卑斯雪山小鎮"
+    },
+    {
+      "id": "iceland",
+      "name": "冰島",
+      "symbol": "🇮🇸",
+      "desc": "極光在黑夜狂舞、藍湖溫泉與藍冰洞冰川奇景"
+    },
+    {
+      "id": "egypt",
+      "name": "埃及",
+      "symbol": "🇪🇬",
+      "desc": "吉薩金字塔宏偉千古、尼羅河畔夕照人面獅身"
+    },
+    {
+      "id": "korea",
+      "name": "韓國",
+      "symbol": "🇰🇷",
+      "desc": "首爾景福宮韓服漫步、釜山海雲台漫步與櫻花大道"
+    },
+    {
+      "id": "australia",
+      "name": "澳洲",
+      "symbol": "🇦🇺",
+      "desc": "雪梨歌劇院港灣晨光、大堡礁蔚藍珊瑚海域"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "travel",
+      "name": "浪漫旅遊",
+      "icon": "✈️",
+      "desc": "漫步異國街頭，探索世界未知美景與風土人情"
+    },
+    {
+      "id": "wedding",
+      "name": "夢幻婚禮",
+      "icon": "💍",
+      "desc": "神聖幸福時刻，定格此生最甜蜜動人的誓言"
+    },
+    {
+      "id": "business",
+      "name": "商務出差",
+      "icon": "💼",
+      "desc": "自信沉著，穿梭於國際大都會頂尖商務殿堂"
+    },
+    {
+      "id": "archeology",
+      "name": "學術考訪",
+      "icon": "🧭",
+      "desc": "探索千年文明古蹟遺址，尋找歷史深處的智慧"
+    },
+    {
+      "id": "office",
+      "name": "辦公任務",
+      "icon": "💻",
+      "desc": "高效幹練的數位游牧生活，隨時隨地開啟世界"
+    }
+  ],
+  "backgrounds": [
+    {
+      "id": "sunset",
+      "name": "黃昏暮色",
+      "icon": "🌅",
+      "desc": "金橘色夕陽染紅半邊天，光影柔和動人"
+    },
+    {
+      "id": "ocean",
+      "name": "蔚藍海洋",
+      "icon": "🌊",
+      "desc": "碧波盪漾、浪花拍岸的浩瀚無垠海平線"
+    },
+    {
+      "id": "capital",
+      "name": "現代首都",
+      "icon": "🏙️",
+      "desc": "高樓林立、流光溢彩的國際摩天都市輪廓"
+    },
+    {
+      "id": "mountain",
+      "name": "雄偉高山",
+      "icon": "⛰️",
+      "desc": "山嶺聳入雲霄，層巒疊嶂的壯麗山嶽峰巔"
+    },
+    {
+      "id": "grassland",
+      "name": "廣袤草原",
+      "icon": "🌾",
+      "desc": "風吹草低見牛羊，翠綠綿延至天際的悠遠草原"
+    },
+    {
+      "id": "amusement",
+      "name": "歡樂遊樂區",
+      "icon": "🎡",
+      "desc": "旋轉木馬與摩天輪點綴，夢幻歡樂童話樂園"
+    }
+  ],
+  "nba_players": [
+    {
+      "id": "iverson",
+      "name": "艾倫・艾佛森 (Allen Iverson)",
+      "nickname": "戰神 AI",
+      "no": "3"
+    },
+    {
+      "id": "curry",
+      "name": "史蒂芬・柯瑞 (Stephen Curry)",
+      "nickname": "神射咖哩",
+      "no": "30"
+    },
+    {
+      "id": "lebron",
+      "name": "勒布朗・詹姆斯 (LeBron James)",
+      "nickname": "小皇帝 King",
+      "no": "23"
+    },
+    {
+      "id": "doncic",
+      "name": "盧卡・東契奇 (Luka Dončić)",
+      "nickname": "魔術金童",
+      "no": "77"
+    },
+    {
+      "id": "kobe",
+      "name": "科比・布萊恩 (Kobe Bryant)",
+      "nickname": "黑曼巴 Mamba",
+      "no": "24"
+    },
+    {
+      "id": "shaq",
+      "name": "俠客・歐尼爾 (Shaquille O'Neal)",
+      "nickname": "大鯊魚 Shaq",
+      "no": "34"
+    },
+    {
+      "id": "durant",
+      "name": "凱文・杜蘭特 (Kevin Durant)",
+      "nickname": "死神 KD",
+      "no": "35"
+    },
+    {
+      "id": "wemby",
+      "name": "維克托・文班亞馬 (Victor Wembanyama)",
+      "nickname": "外星斑馬 Wemby",
+      "no": "1"
+    },
+    {
+      "id": "jordan",
+      "name": "麥可・喬丹 (Michael Jordan)",
+      "nickname": "籃球之神 MJ",
+      "no": "23"
+    },
+    {
+      "id": "morant",
+      "name": "賈・莫蘭特 (Ja Morant)",
+      "nickname": "腰王 12",
+      "no": "12"
+    },
+    {
+      "id": "irving",
+      "name": "凱里・厄文 (Kyrie Irving)",
+      "nickname": "球場魔術師 Uncle Drew",
+      "no": "11"
+    },
+    {
+      "id": "lamelo",
+      "name": "拉梅洛・鮑爾 (LaMelo Ball)",
+      "nickname": "三球 Melo",
+      "no": "1"
+    },
+    {
+      "id": "giannis",
+      "name": "揚尼斯・阿德托昆博 (Giannis Antetokounmpo)",
+      "nickname": "希臘怪物 Greek Freak",
+      "no": "34"
+    },
+    {
+      "id": "edwards",
+      "name": "安東尼・愛德華茲 (Anthony Edwards)",
+      "nickname": "超新星 Ant-Man",
+      "no": "5"
+    }
+  ],
+  "slogans": [
+    "漫步京都，定格每一抹櫻色浪漫",
+    "馳騁高山，遇見最自由真實的自己",
+    "光影流轉，收藏世界專屬你的風景",
+    "此生必訪，在蔚藍海風中自在徜徉",
+    "逐光而行，每一步都是心靈的冒險",
+    "浪漫誓約，在世界天涯銘記此生之愛",
+    "璀璨都會，寫下屬於你的傳奇故事",
+    "探秘文明，在古老歲月中觸碰永恆",
+    "夢想起航，每一次出發都有新的奇蹟",
+    "球場同框，熱血青春與傳奇巨星共舞"
+  ]
+}

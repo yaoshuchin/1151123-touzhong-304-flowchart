@@ -1,0 +1,11 @@
+# Temporary and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+pages/
+pages_upright/
+.vscode/
+.idea/
+*.tmp
+.DS_Store
+Thumbs.db

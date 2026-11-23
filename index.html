@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>南投國中 304 班｜AI旅程照片生成器 & 流程圖規格庫</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
+</head>
+<body>
+
+  <!-- ================== 通行碼管制視窗 (密碼 049) ================== -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-badge">南投縣立南投國民中學 304 班</div>
+      <div class="auth-icon">🔒</div>
+      <h2 class="auth-title">請輸入通行管制碼</h2>
+      <p class="auth-desc">本系統為投中 304 班「AI旅程照片生成器」成果系統，請輸入通關密碼（電話區碼）進入。</p>
+      
+      <form id="authForm" class="auth-form" onsubmit="event.preventDefault(); handleAuthSubmit();">
+        <div class="auth-input-group">
+          <input type="password" id="authInput" class="auth-input" placeholder="請輸入 3 碼通行密碼" maxlength="10" autocomplete="off" autofocus>
+        </div>
+        <div class="auth-hint">
+          <span>💡 提示：南投在地電話區碼（3位數）</span>
+        </div>
+        <button type="submit" class="auth-btn">驗證並進入系統</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================== 頂部導航列 ================== -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo">304</div>
+        <div class="brand-text">
+          <h1>投中 304｜AI旅程照片生成器</h1>
+          <p>流程圖手稿辨識庫 & 6步驟互動工作台</p>
+        </div>
+      </div>
+
+      <!-- 導覽切換分頁 -->
+      <nav class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tab-flowcharts">
+          <span>🗂️</span> 手稿分類查詢
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-studio">
+          <span>🎨</span> AI 旅程生成器
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-matrix">
+          <span>📖</span> 四大維度矩陣
+        </button>
+      </nav>
+
+      <!-- 動作快捷區 -->
+      <div class="header-actions">
+        <a href="1151123投中304流程圖.docx" download class="btn-action">
+          <span>📥</span> 下載 Word 彙編
+        </a>
+        <a href="1151123投中304流程圖.pdf" target="_blank" class="btn-action">
+          <span>📄</span> 查看原始 PDF
+        </a>
+        <button id="lockBtn" class="btn-action" title="鎖定系統">
+          <span>🔒</span> 鎖定
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================== 主要內容區域 ================== -->
+  <main class="main-wrapper">
+
+    <!-- ==================== TAB 1: 手稿分類互動查詢 ==================== -->
+    <section id="tab-flowcharts" class="tab-pane active">
+      <div class="section-banner">
+        <h2>304 班流程圖手稿・全方位互動分類查詢庫</h2>
+        <p>收錄全班 17 份原創流程圖手稿，支援高解析手寫圖檢視、精準文字辨識、核心亮點分析與一鍵帶入生成器。</p>
+      </div>
+
+      <!-- 篩選器與搜尋列 -->
+      <div class="filter-card">
+        <div class="search-row">
+          <div class="search-box-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="搜尋學生姓名、座號、關鍵字（如：婚紗、NBA、Webcam、水彩、國防、Canvas）...">
+          </div>
+          <div class="filter-pills-row">
+            <span class="filter-label">步驟篩選：</span>
+            <button class="pill-btn active" data-step-filter="all">全部步數</button>
+            <button class="pill-btn" data-step-filter="5">5 步驟</button>
+            <button class="pill-btn" data-step-filter="6">6 步驟</button>
+            <button class="pill-btn" data-step-filter="7">7 步驟</button>
+          </div>
+        </div>
+
+        <div class="filter-pills-row">
+          <span class="filter-label">分類主題：</span>
+          <button class="pill-btn active" data-cat-filter="all">全部主題 (17)</button>
+          <button class="pill-btn" data-cat-filter="旗艦標準規範">旗艦標準規範</button>
+          <button class="pill-btn" data-cat-filter="NBA球星合照特輯">NBA球星同框</button>
+          <button class="pill-btn" data-cat-filter="UI/UX互動優化,系統工程與技術架構,視覺進度與重塑,Webcam實景濾鏡">流程引導與技術</button>
+          <button class="pill-btn" data-cat-filter="軍事與裝備風格,婚紗與跨國旅拍,節日與裁切版型,遊戲電競與劇情,海陸空多維旅程">特色情境主題</button>
+          <button class="pill-btn" data-cat-filter="完整旅程與任務架構,概念規格規範,輕量直覺設計">概念規格搭配</button>
+        </div>
+      </div>
+
+      <!-- 統計數據 -->
+      <div class="stats-bar">
+        <div id="statsCount">正在載入提案列表...</div>
+        <div>💡 點擊手稿縮圖或卡片可彈出高解析原稿與文字對照</div>
+      </div>
+
+      <!-- 卡片清單網格 -->
+      <div id="flowchartsGrid" class="cards-grid">
+        <!-- 由 JavaScript 動態生成卡片 -->
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: AI 旅程照片生成器 (6 步驟工作台) ==================== -->
+    <section id="tab-studio" class="tab-pane">
+      <div class="studio-layout">
+        
+        <!-- 左側：6 步驟 Stepper 互動主工作區 -->
+        <div class="studio-main">
+          
+          <!-- Stepper 導覽指示列 -->
+          <div class="stepper-nav" id="stepperNav">
+            <div class="stepper-progress-fill" id="stepperProgressFill"></div>
+            
+            <button class="step-node active" data-step="1">
+              <div class="step-circle">1</div>
+              <div class="step-text">照片來源</div>
+            </button>
+            <button class="step-node" data-step="2">
+              <div class="step-circle">2</div>
+              <div class="step-text">藝術風格</div>
+            </button>
+            <button class="step-node" data-step="3">
+              <div class="step-circle">3</div>
+              <div class="step-text">世界地點</div>
+            </button>
+            <button class="step-node" data-step="4">
+              <div class="step-circle">4</div>
+              <div class="step-text">主題情境</div>
+            </button>
+            <button class="step-node" data-step="5">
+              <div class="step-circle">5</div>
+              <div class="step-text">背景場景</div>
+            </button>
+            <button class="step-node" data-step="6">
+              <div class="step-circle">6</div>
+              <div class="step-text">標語合成</div>
+            </button>
+          </div>
+
+          <!-- STEP 1: 照片來源 -->
+          <div id="step-pane-1" class="step-content-pane active">
+            <div class="step-header">
+              <h3>步驟 1：照片來源輸入（上傳／即時 Webcam 拍照）</h3>
+              <p>支援電腦／手機相片檔案拖曳上傳，或開啟攝影機（Webcam）即時拍照實景。</p>
+            </div>
+
+            <div class="upload-mode-toggle">
+              <button class="mode-btn active" id="btnModeUpload">📁 檔案拖曳 / 上傳</button>
+              <button class="mode-btn" id="btnModeWebcam">📷 開啟視訊鏡頭 (Webcam)</button>
+            </div>
+
+            <!-- 檔案上傳模式 -->
+            <div id="uploadContainer">
+              <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">📸</div>
+                <h4>點擊上傳或將照片拖曳至此處</h4>
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;">支援 JPG、PNG、WEBP 等高畫質人像照片</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+              </div>
+            </div>
+
+            <!-- 視訊相機拍照模式 -->
+            <div id="webcamContainer" class="webcam-container">
+              <video id="webcamVideo" autoplay playsinline></video>
+              <div style="display: flex; gap: 0.5rem; justify-content: center; width: 100%;">
+                <button type="button" class="btn-action btn-primary" id="btnSnapPhoto">📸 立即拍攝</button>
+                <button type="button" class="btn-action" id="btnSwitchCamera">🔄 切換鏡頭</button>
+                <button type="button" class="btn-action" id="btnCloseCamera">❌ 關閉相機</button>
+              </div>
+            </div>
+
+            <!-- 快速測試用：內建示範人物照片選單 -->
+            <div class="sample-avatars-row">
+              <div class="sample-avatars-title">⚡ 快速測試體驗（點擊直接套用示範照片）：</div>
+              <div class="avatar-chips">
+                <button class="avatar-chip" data-sample="traveler">🎒 活力旅人</button>
+                <button class="avatar-chip" data-sample="student">🎓 陽光學生</button>
+                <button class="avatar-chip" data-sample="retro">🎨 文藝青年</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: 藝術風格選擇 (10種) -->
+          <div id="step-pane-2" class="step-content-pane">
+            <div class="step-header">
+              <h3>步驟 2：選擇藝術風格濾鏡（全班共識 10 種風格）</h3>
+              <p>王羿騰、謝宜健、羅凡鈞等同學提議之 10 種多元藝術濾鏡渲染效果。</p>
+            </div>
+            <div id="stylesGrid" class="options-grid">
+              <!-- JS 動態生成 10 種風格卡片 -->
+            </div>
+          </div>
+
+          <!-- STEP 3: 世界地點選擇 (10區) -->
+          <div id="step-pane-3" class="step-content-pane">
+            <div class="step-header">
+              <h3>步驟 3：選擇旅遊探索地點（10 大全球地區勝地）</h3>
+              <p>穿越臺灣、日本、歐洲等全球 10 大熱門旅遊勝地與知名地標。</p>
+            </div>
+            <div id="locationsGrid" class="options-grid">
+              <!-- JS 動態生成 10 大地點卡片 -->
+            </div>
+          </div>
+
+          <!-- STEP 4: 主題任務/情境 (5類 + NBA球星彩蛋) -->
+          <div id="step-pane-4" class="step-content-pane">
+            <div class="step-header">
+              <h3>步驟 4：選擇主題任務情境（5 種主題 + NBA球星合照彩蛋）</h3>
+              <p>自選浪漫旅遊、夢幻婚禮、學術考訪，或開啟 304 班游傑、王廷同學構思的 NBA 球星合照模式！</p>
+            </div>
+
+            <!-- 5 種標準情境 -->
+            <div id="tasksGrid" class="options-grid">
+              <!-- JS 動態生成 5 大主題情境卡片 -->
+            </div>
+
+            <!-- NBA 球星同框彩蛋開關 -->
+            <div class="nba-toggle-box">
+              <div class="nba-toggle-text">
+                <h4>🏀 304 班專屬彩蛋：NBA 傳奇巨星合照模式</h4>
+                <p>由 18 號游傑、20 號王廷同學提案，可選擇與 NBA 巨星同框！</p>
+              </div>
+              <button class="pill-btn" id="btnToggleNba">開啟 NBA 模式</button>
+            </div>
+
+            <div id="nbaContainer" style="display: none; margin-top: 1rem;">
+              <div style="font-size: 0.85rem; font-weight: 600; color: #854d0e; margin-bottom: 0.5rem;">🌟 選擇要合照的 NBA 球星：</div>
+              <div id="nbaPlayersGrid" class="nba-players-grid">
+                <!-- JS 動態生成 14 位 NBA 球星選項 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5: 背景場景選擇 (6大類) -->
+          <div id="step-pane-5" class="step-content-pane">
+            <div class="step-header">
+              <h3>步驟 5：選擇背景地貌場景（6 大經典場景）</h3>
+              <p>黃昏暮色、蔚藍海洋、現代首都、雄偉高山、廣袤草原、歡樂遊樂區。</p>
+            </div>
+            <div id="backgroundsGrid" class="options-grid">
+              <!-- JS 動態生成 6 大背景卡片 -->
+            </div>
+          </div>
+
+          <!-- STEP 6: 智慧標語與海報合成 -->
+          <div id="step-pane-6" class="step-content-pane">
+            <div class="step-header">
+              <h3>步驟 6：智慧標語生成與海報輸出（HTML5 Canvas）</h3>
+              <p>依據您先前的選擇自動產生 8~15 字吸睛文案，即時繪製高畫質圖卡並支援下載！</p>
+            </div>
+
+            <div class="filter-card">
+              <div class="modal-section-title">✍️ 8～15 字智慧旅遊宣傳標語：</div>
+              <div class="slogan-input-wrapper">
+                <input type="text" id="sloganTextInput" class="slogan-input" placeholder="輸入或編輯您的標語（8~15字）">
+                <button type="button" class="btn-action" id="btnRandomSlogan">🎲 換一句</button>
+              </div>
+              <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.4rem;">
+                💡 標語可隨機生成或手動輸入，字數建議保持在 8~15 字以達最佳排版效果。
+              </div>
+            </div>
+
+            <div style="background: #eff6ff; padding: 1rem; border-radius: var(--radius-md); border: 1px solid #bfdbfe; margin-top: 1rem;">
+              <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.35rem;">🎉 恭喜！已完成所有 6 個步驟</div>
+              <div style="font-size: 0.88rem; color: #1e40af;">
+                您所挑選的風格、地點、情境與背景已成功匯入右側 HTML5 Canvas 畫布，請檢視右方即時海報預覽，並點擊「下載高畫質海報」保存成果！
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部 Stepper 上一步 / 下一步按鈕列 -->
+          <div class="stepper-actions">
+            <button class="btn-action" id="btnPrevStep" disabled>← 上一步</button>
+            <button class="btn-action btn-primary" id="btnNextStep">下一步 →</button>
+          </div>
+
+        </div>
+
+        <!-- 右側：即時 Canvas 渲染預覽與下載面板 -->
+        <aside class="studio-sidebar">
+          <div class="preview-card">
+            <h4><span>🖼️</span> 即時海報成果預覽</h4>
+            
+            <div class="canvas-wrapper">
+              <canvas id="posterCanvas" width="600" height="800"></canvas>
+            </div>
+
+            <button id="btnDownloadPoster" class="btn-download-lg">
+              <span>📥</span> 一鍵下載高畫質海報 (PNG)
+            </button>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.6rem;">
+              <button id="btnResetStudio" class="btn-action" style="flex: 1;">🔄 重新製作</button>
+              <button id="btnCopySlogan" class="btn-action" style="flex: 1;">📋 複製文案</button>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: 四大維度功能矩陣 ==================== -->
+    <section id="tab-matrix" class="tab-pane">
+      <div class="section-banner" style="background: linear-gradient(135deg, #4338ca, #6366f1);">
+        <h2>全班共識・四大核心參數維度矩陣清單</h2>
+        <p>完整收錄 304 班 17 份手稿交集之 10 大藝術風格、10 大全球地點、5 大主題任務、6 大背景場景及 14 位 NBA 球星庫。</p>
+      </div>
+
+      <!-- 10 大風格 -->
+      <div class="matrix-section">
+        <div class="matrix-header">
+          <h3>🎨 10 大藝術風格濾鏡矩陣 (Art Styles)</h3>
+        </div>
+        <div id="matrixStylesGrid" class="matrix-grid-3"></div>
+      </div>
+
+      <!-- 10 大地點 -->
+      <div class="matrix-section">
+        <div class="matrix-header">
+          <h3>🌍 10 大探索旅遊勝地 (Locations)</h3>
+        </div>
+        <div id="matrixLocationsGrid" class="matrix-grid-3"></div>
+      </div>
+
+      <!-- 5 大情境 -->
+      <div class="matrix-section">
+        <div class="matrix-header">
+          <h3>💼 5 大主題任務情境 (Themes & Scenarios)</h3>
+        </div>
+        <div id="matrixTasksGrid" class="matrix-grid-3"></div>
+      </div>
+
+      <!-- 6 大背景 -->
+      <div class="matrix-section">
+        <div class="matrix-header">
+          <h3>🌄 6 大背景場景地貌 (Backgrounds)</h3>
+        </div>
+        <div id="matrixBackgroundsGrid" class="matrix-grid-3"></div>
+      </div>
+
+      <!-- 14 位 NBA 球星 -->
+      <div class="matrix-section">
+        <div class="matrix-header">
+          <h3>🏀 14 位 NBA 巨星合照名單庫 (NBA Roster)</h3>
+        </div>
+        <div id="matrixNbaGrid" class="matrix-grid-3"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================== 手稿詳細資訊 MODAL ================== -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-box">
+          <h3 id="modalAuthor">手稿作者與主題</h3>
+          <p id="modalCategory">分類與步驟步數</p>
+        </div>
+        <button class="btn-modal-close" id="btnModalClose">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- 左側手稿影像 -->
+        <div class="modal-img-container">
+          <img id="modalImg" src="" alt="手稿原圖">
+        </div>
+
+        <!-- 右側詳細文字與步驟 -->
+        <div class="modal-info-panel">
+          <div>
+            <div class="modal-section-title">📝 手稿文字逐字辨識：</div>
+            <div id="modalRawText" class="raw-text-box"></div>
+          </div>
+
+          <div>
+            <div class="modal-section-title">🎯 結構化步驟分解：</div>
+            <div id="modalStepsList" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+          </div>
+
+          <div>
+            <div class="modal-section-title">✨ 創意特色與創新亮點：</div>
+            <div id="modalFeaturesList" style="font-size: 0.88rem; color: #475569;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-action" id="btnModalApply">🚀 將此構想代入 AI 生成器</button>
+        <button class="btn-action btn-primary" id="btnModalOk">關閉檢視</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 訊息提示元件 -->
+  <div id="toast" class="toast-notice">
+    <span id="toastIcon">ℹ️</span>
+    <span id="toastMsg">提示訊息</span>
+  </div>
+
+  <!-- 載入資料庫 bundle 與應用程式邏輯 -->
+  <script src="assets/flowcharts_bundle.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
