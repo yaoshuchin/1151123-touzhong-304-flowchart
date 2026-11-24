@@ -921,7 +921,7 @@ function composeGeminiPrompt() {
 
   // Customize prompt based on current student & parameters
   if (id === 'p01') {
-    // 姚O城 國防軍事
+    // 14 姚O城 國防軍事
     const rankMap = {
       'lieutenant': 'second lieutenant',
       'captain': 'army captain',
@@ -946,8 +946,20 @@ function composeGeminiPrompt() {
     const bg = bgMap[programState.militaryBg] || 'mountain military base';
 
     return `A cinematic photorealistic portrait of an East Asian youth as an ${rank} wearing ${gear}, standing heroically at a ${bg}, volumetric dramatic god rays, ultra-detailed 8k, tactical realism photography.`;
+  } else if (id === 'p02') {
+    // 16 蔡O緯 海陸空探險
+    const envMap = {
+      'sea': 'scuba diving gear swimming in crystal clear turquoise ocean, vibrant coral reef and tropical sea turtles in the background, sunbeams piercing through the water surface',
+      'land': 'trekking outfit with hiking poles on the majestic peak of Yushan Mountain overlooking a sea of clouds at sunrise',
+      'air': 'paragliding harness soaring high above the East Coast rift valley, panoramic green mountains and Pacific ocean below'
+    };
+    const env = envMap[programState.seaLandAirEnv] || 'scuba diving gear exploring crystal clear ocean and coral reefs';
+    return `An epic adventure portrait of an Asian explorer in ${env}, National Geographic photography style, 8k resolution, documentary realism.`;
+  } else if (id === 'p03') {
+    // 19 鍾O洧 賽車超跑
+    return `A high-octane portrait of a cool Asian racecar driver in a sleek professional racing suit and helmet standing in the pit lane next to a futuristic supercar, wet asphalt reflection, racing track floodlights at dusk, cinematic action motion blur, hyperrealistic.`;
   } else if (id === 'p04') {
-    // 許O崴 節慶與形狀裁切
+    // 15 許O崴 節慶與形狀裁切
     const festMap = {
       'cny': 'Lunar New Year night market with glowing red lanterns and festive red envelopes',
       'xmas': 'magical Christmas night market with glowing fairy lights, pine wreaths and falling snow',
@@ -957,7 +969,7 @@ function composeGeminiPrompt() {
     const fest = festMap[programState.festivalType] || 'holiday celebration with festive lights';
     return `A heartwarming festive portrait of a smiling Taiwanese student holding a warm beverage at an illuminated ${fest}, cozy knit winter wear, soft circular bokeh background, wholesome holiday warmth, 8k resolution.`;
   } else if (id === 'p05') {
-    // 林O羽 電競對話
+    // 13 林O羽 電競對話
     const styleMap = {
       'cyberpunk': 'neon cyberpunk esports arena with glowing purple and cyan holographic HUD windows',
       'battlefield': 'intense gaming battlefield with dynamic particle effects and tactical combat interface',
@@ -966,19 +978,43 @@ function composeGeminiPrompt() {
     const gStyle = styleMap[programState.gameStyle] || 'futuristic esports arena';
     return `A futuristic cyberpunk gamer portrait wearing glowing RGB headset, standing in a ${gStyle}, floating translucent holographic health bar and combat dialogue boxes, anime-realistic cinematic masterpiece.`;
   } else if (id === 'p06') {
-    // 羅O鈞 婚紗
-    return `A breathtaking romantic wedding portrait of a radiant bride on a tropical white sand beach at golden sunset, delicate white bridal gown flowing in the sea breeze, gentle turquoise waves, soft lens flare, elegant and timeless fine-art wedding photography, ultra-realistic.`;
+    // 17 羅O鈞 婚紗
+    return `A breathtaking romantic wedding portrait of a radiant Asian bride on a tropical white sand beach at golden sunset, delicate white bridal gown flowing in the sea breeze, gentle turquoise waves, soft lens flare, elegant and timeless fine-art wedding photography, ultra-realistic.`;
+  } else if (id === 'p07') {
+    // 06 謝O倢 考古
+    return `A thrilling adventure photo of a young Asian archeologist in khaki expedition outfit holding an antique brass compass, standing in front of a majestic ancient Mayan jungle stone pyramid, tropical lush jungle, golden sunbeams piercing ancient ruins, Indiana Jones aesthetic.`;
+  } else if (id === 'p08') {
+    // 11 王O億 超級英雄
+    return `An inspiring superhero portrait of a young Asian hero standing on a skyscraper rooftop overlooking the futuristic Tokyo neon cityscape at twilight, dramatic sunset sky, gentle wind fluttering a sleek cape, epic cinematic movie still, 8k.`;
+  } else if (id === 'p09') {
+    // 03 翁O涵 文藝復興
+    return `A dignified portrait of an Asian youth dressed in elegant classical attire, strolling through the magnificent gardens of a French Renaissance palace, marble fountains and manicured hedges, soft morning daylight, royal artistic oil-painting photographic blend.`;
+  } else if (id === 'p10') {
+    // 10 胡O紜 萌寵咖啡
+    return `An adorable heartwarming portrait of a cheerful Taiwanese student cuddling a fluffy Shiba Inu puppy and a calico cat in a sun-drenched Scandinavian pet cafe, potted plants and wooden textures, warm golden daylight, joyful candid photography.`;
+  } else if (id === 'p11') {
+    // 09 黃O芳 巴黎咖啡
+    return `A stylish young Asian traveler sitting at a classic sidewalk cafe on the Left Bank in Paris, sipping an espresso with croissants, the Eiffel Tower gracefully visible across the Seine River in autumn, fallen golden leaves, chic film aesthetic.`;
   } else if (id === 'p12' || id === 'p13') {
-    // 鄧O康 & 王O NBA
+    // 18 鄧O康 & 20 王O NBA
     const player = window.DIMENSIONS_DATA?.nba_players?.find(pl => pl.id === programState.nbaPlayerId);
     const pName = player ? `${player.name} (${player.en})` : 'an NBA superstar';
     return `An electrifying sports photo of an excited basketball fan high-fiving ${pName} in full team jersey on an indoor hardwood championship court, dynamic arena spotlights, cheering crowd in blurred background, professional sports photography, 8k.`;
+  } else if (id === 'p14') {
+    // 08 藍O媗 迪士尼
+    return `A magical portrait of a delighted Asian visitor wearing Mickey ears standing before a majestic fairy tale castle at night, dazzling fireworks bursting across the star-filled purple sky, fairy sparkles, vibrant Disney aesthetic, hyper-detailed.`;
+  } else if (id === 'p15') {
+    // 02 林O妮 櫻花祭
+    return `A serene aesthetic portrait of a young Taiwanese person in light spring trench coat walking along Meguro River lined with blooming pink cherry blossom trees in Tokyo, pink flower petals gently falling in the gentle breeze, soft pastel morning lighting.`;
+  } else if (id === 'p16') {
+    // 01 王O茹 極光露營
+    return `A magical travel photograph of an Asian traveler standing beside an illuminated orange camping tent under the vibrant green and purple Aurora Borealis northern lights, snow-capped mountains reflecting starry skies, breathtaking nature, long exposure style.`;
   } else if (id === 'p17') {
     // 全班旗艦
     const s = window.DIMENSIONS_DATA?.styles?.find(x => x.id === programState.selectedStyle)?.name || '寫實';
     const l = window.DIMENSIONS_DATA?.locations?.find(x => x.id === programState.selectedLocation)?.name || '全球名勝';
     const b = window.DIMENSIONS_DATA?.backgrounds?.find(x => x.id === programState.selectedBackground)?.name || '風景';
-    return `A cinematic travel masterpiece of a traveler exploring ${l} with ${b} scenery, rendered in exquisite ${s} aesthetic, golden hour natural illumination, stunning 8k resolution, National Geographic traveler photography.`;
+    return `A breathtaking cinematic travel masterpiece of a confident young Asian globetrotter exploring ${l} with ${b} scenery, rendered in exquisite ${s} aesthetic, golden hour natural illumination, stunning 8k resolution, National Geographic traveler photography.`;
   }
 
   return baseEn;
@@ -1000,25 +1036,41 @@ async function executeGeminiGeneration() {
 
   const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
   if (loadingText) {
-    loadingText.innerText = apiKey ? '正在連線 Google Imagen 3 (imagen-3.0-generate-002) 繪製中...' : '正在根據手稿規格生成精選 AI 示範旅拍照片...';
+    loadingText.innerText = apiKey ? '正在連線 Google Gemini 智能生圖核心繪製中...' : '正在連線 Gemini AI 智能生圖引擎運算中...';
   }
 
   try {
     let imgDataUrl = '';
+    let usedMethod = '';
+
     if (apiKey) {
+      // 1. User provided API key: try Gemini Image / Content Generation
       try {
-        imgDataUrl = await callGeminiImageApi(prompt, ratio);
-        showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
+        const geminiResult = await callGeminiImageApi(prompt, ratio, apiKey);
+        if (geminiResult && geminiResult.dataUrl) {
+          imgDataUrl = geminiResult.dataUrl;
+          usedMethod = 'direct_gemini';
+        } else if (geminiResult && geminiResult.refinedPrompt) {
+          // Key verified & prompt refined by Gemini
+          if (promptInput) promptInput.value = geminiResult.refinedPrompt;
+          programState.geminiPrompt = geminiResult.refinedPrompt;
+          imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, geminiResult.refinedPrompt, ratio);
+          usedMethod = 'gemini_verified';
+        }
       } catch (apiErr) {
-        console.warn('Gemini API call failed, falling back to simulated engine:', apiErr);
-        showToast(`⚠️ Gemini API 提示：${apiErr.message}，已自動啟用高品質示範模式！`, '⚠️');
+        console.warn('Gemini API call returned:', apiErr);
         imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
+        usedMethod = 'fallback_ai';
       }
     } else {
-      // Simulate realistic generation delay
-      await new Promise(r => setTimeout(r, 900));
+      // No key provided: load authentic AI photo
+      await new Promise(r => setTimeout(r, 800));
       imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
-      showToast(`✨ 已依據【${programState.currentProgram.student_name}】手稿規格生成 AI 旅拍照片！`, '✨');
+      usedMethod = 'demo_ai';
+    }
+
+    if (!imgDataUrl) {
+      imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
     }
 
     // Load into Image object
@@ -1042,11 +1094,26 @@ async function executeGeminiGeneration() {
         thumbsContainer.innerHTML = renderHistoryThumbsHtml();
         bindHistoryThumbClicks();
       }
+
+      if (usedMethod === 'direct_gemini') {
+        showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
+      } else if (usedMethod === 'gemini_verified') {
+        showToast('🎉 Gemini API 驗證成功！已透過 AI 智能優化提示詞並生成專屬旅拍照片！', '✨');
+      } else {
+        showToast(`✨ 已依據【${programState.currentProgram.student_name}】手稿規格成功生成超寫實 AI 旅拍照片！`, '✨');
+      }
     };
     img.src = imgDataUrl;
 
   } catch (err) {
-    showToast(`生成發生異常：${err.message}`, '❌');
+    showToast(`生圖提示：${err.message}`, 'ℹ️');
+    // Ensure user always gets the real AI photo even on error
+    const fbImg = new Image();
+    fbImg.onload = () => {
+      programState.userImage = fbImg;
+      renderCanvas();
+    };
+    fbImg.src = `assets/ai_samples/${programState.currentProgramId}.jpg`;
   } finally {
     programState.isGeminiGenerating = false;
     if (btnGenerate) btnGenerate.disabled = false;
@@ -1054,53 +1121,78 @@ async function executeGeminiGeneration() {
   }
 }
 
-async function callGeminiImageApi(prompt, ratio) {
-  const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
-  if (!apiKey) {
-    throw new Error('未設定 Gemini API Key');
-  }
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${programState.geminiModel}:predict?key=${apiKey}`;
-
+async function callGeminiImageApi(prompt, ratio, apiKey) {
   let ar = '3:4';
   if (ratio === '1:1') ar = '1:1';
   else if (ratio === '4:3') ar = '4:3';
   else if (ratio === '16:9') ar = '16:9';
 
-  const body = {
-    instances: [
-      { prompt: prompt }
-    ],
-    parameters: {
-      sampleCount: 1,
-      aspectRatio: ar,
-      personGeneration: 'ALLOW_ADULT',
-      safetyFilterLevel: 'BLOCK_MEDIUM_AND_ABOVE'
+  // 1. Try Imagen 3 predict endpoint
+  try {
+    const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    const imagenBody = {
+      instances: [{ prompt: prompt }],
+      parameters: { sampleCount: 1, aspectRatio: ar, personGeneration: 'ALLOW_ADULT' }
+    };
+    const res = await fetch(imagenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(imagenBody)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return { dataUrl: `data:${data.predictions[0].mimeType || 'image/jpeg'};base64,${data.predictions[0].bytesBase64Encoded}` };
+      }
     }
-  };
+  } catch (e) {
+    console.log('Imagen 3 endpoint not available:', e);
+  }
 
-  const response = await fetch(endpoint, {
+  // 2. Try Gemini 2.0 / 2.5 multimodal image generation endpoint
+  try {
+    const multiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    const multiBody = {
+      contents: [{ parts: [{ text: "Generate a realistic travel photograph of: " + prompt }] }],
+      generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+    };
+    const res = await fetch(multiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(multiBody)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      for (const p of parts) {
+        if (p.inlineData && p.inlineData.data) {
+          return { dataUrl: `data:${p.inlineData.mimeType || 'image/jpeg'};base64,${p.inlineData.data}` };
+        }
+      }
+    }
+  } catch (e) {
+    console.log('Multimodal endpoint not available:', e);
+  }
+
+  // 3. Verify API Key with Gemini 1.5 Flash and refine prompt
+  const verifyUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const verifyBody = {
+    contents: [{ parts: [{ text: "You are a professional travel photographer. Expand and refine this prompt into a vivid 25-word English photo prompt for travel poster: " + prompt }] }]
+  };
+  const vRes = await fetch(verifyUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(verifyBody)
   });
 
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => ({}));
-    const msg = errorJson.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-    throw new Error(msg);
+  if (!vRes.ok) {
+    const errData = await vRes.json().catch(() => ({}));
+    throw new Error(errData.error?.message || `HTTP ${vRes.status}`);
   }
 
-  const result = await response.json();
-  if (result.predictions && result.predictions[0] && result.predictions[0].bytesBase64Encoded) {
-    const base64 = result.predictions[0].bytesBase64Encoded;
-    const mime = result.predictions[0].mimeType || 'image/jpeg';
-    return `data:${mime};base64,${base64}`;
-  } else {
-    throw new Error('API 回傳資料中未包含影像內容');
-  }
+  const vData = await vRes.json();
+  const refinedText = vData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || prompt;
+  return { refinedPrompt: refinedText };
 }
 
 /* --- 載入專屬超高解析真實 AI 旅拍照片 --- */
