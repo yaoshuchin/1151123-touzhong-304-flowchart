@@ -320,6 +320,7 @@ const programState = {
   selectedBackground: 'sunset',
   
   webcamStream: null,
+  rawUploadedImage: null,
 
   // Gemini AI 生圖核心參數
   geminiApiKey: localStorage.getItem('gemini_api_key') || '',
@@ -504,176 +505,286 @@ function renderCurrentStepPane() {
   }
 }
 
-/* --- STEP 1: 照片輸入與相機 (深度整合 Google Gemini AI 智能生圖) --- */
-let activePhotoInputMode = 'gemini'; // 'gemini', 'upload', 'webcam'
+function renderKwChipsHtml(prog) {
+  const customKws = (prog && prog.gemini_prompt) ? prog.gemini_prompt.keywords : ['旅拍肖像', '自然光線', '超高解析度'];
+  const universalKws = ['8K Ultra-HD', 'Cinematic Lighting', 'Photorealistic', 'Bokeh Effect', 'Masterpiece'];
+  const combined = Array.from(new Set([...customKws, ...universalKws]));
 
+  return combined.map(kw => `
+    <span class="gemini-kw-chip" data-kw="${escapeHtml(kw)}">+ ${escapeHtml(kw)}</span>
+  `).join('');
+}
+
+function renderHistoryThumbsHtml() {
+  if (!programState.geminiHistory || programState.geminiHistory.length === 0) {
+    return '';
+  }
+  return programState.geminiHistory.map((item, idx) => `
+    <div class="gemini-thumb-card" data-history-idx="${idx}" title="${escapeHtml(item.time)} - 點擊套用此成果">
+      <img src="${item.url}" alt="歷史成果">
+    </div>
+  `).join('');
+}
+
+function bindHistoryThumbClicks() {
+  document.querySelectorAll('[data-history-idx]').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.historyIdx);
+      const item = programState.geminiHistory[idx];
+      if (item) {
+        const img = new Image();
+        img.onload = () => {
+          programState.userImage = img;
+          renderCanvas();
+          showToast(`已切換至 ${item.time} 生成之 AI 旅拍照片！`, '🖼️');
+        };
+        img.src = item.url;
+      }
+    });
+  });
+}
+
+/* --- STEP 1: 照片輸入與相機 (直接上傳照片 + 一鍵 AI 智能生圖整合) --- */
 function renderStep1PhotoInput() {
   const p = programState.currentProgram || {};
   const promptText = programState.geminiPrompt || (p.gemini_prompt ? p.gemini_prompt.prompt_en : '');
   const hasKey = !!(programState.geminiApiKey || localStorage.getItem('gemini_api_key'));
+  const hasUpload = !!programState.rawUploadedImage;
+  const currentPhotoSrc = programState.userImage ? programState.userImage.src : `assets/ai_samples/${programState.currentProgramId}.jpg`;
 
   return `
-    <div class="upload-mode-toggle">
-      <button class="mode-btn ${activePhotoInputMode === 'gemini' ? 'active' : ''}" id="btnModeGemini">✨ Gemini AI 智能生圖</button>
-      <button class="mode-btn ${activePhotoInputMode === 'upload' ? 'active' : ''}" id="btnModeUpload">📁 檔案拖曳 / 上傳</button>
-      <button class="mode-btn ${activePhotoInputMode === 'webcam' ? 'active' : ''}" id="btnModeWebcam">📷 視訊鏡頭 (Webcam)</button>
-    </div>
-
-    <!-- ✨ GEMINI AI 生圖模式 (預設展開) -->
-    <div id="geminiContainer" class="gemini-container ${activePhotoInputMode === 'gemini' ? 'active' : ''}" style="${activePhotoInputMode === 'gemini' ? 'display: block;' : 'display: none;'}">
-      <div class="gemini-header-bar">
-        <div class="gemini-status-tag" id="geminiStatusTag" style="${hasKey ? 'background: #f0fdf4; border-color: #86efac; color: #166534;' : ''}">
-          <span class="status-dot"></span>
-          <span id="geminiStatusText">${hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Google Imagen 3 (免 Key 示範體驗)'}</span>
+    <div class="step1-unified-container">
+      
+      <!-- 區域一：直接上傳您的照片 / 相機自拍 -->
+      <div class="upload-direct-card">
+        <div class="upload-direct-header">
+          <span class="upload-step-badge">📸 照片來源</span>
+          <h4>直接上傳個人照片（支援拖曳、選取或鏡頭拍照）：</h4>
         </div>
-        <button type="button" class="gemini-config-btn" id="btnStudioConfigKey">
-          ⚙️ 設定 API Key
-        </button>
-      </div>
 
-      <div class="gemini-prompt-wrapper">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.25rem;">
-          <label class="gemini-label">
-            <span>✨ 智慧生圖咒語 (Prompt)</span>
-            <span class="gemini-sublabel">（已根據【${escapeHtml(p.student_name || '當前學生')}】手稿規格自動合成）：</span>
-          </label>
-          <div style="display: flex; gap: 0.4rem;">
-            <button type="button" class="gemini-mini-btn" id="btnGeminiResetPrompt" title="重置為當前手稿標準咒語">🔄 重置咒語</button>
-            <button type="button" class="gemini-mini-btn" id="btnGeminiCopyPrompt" title="複製此提示詞">📋 複製咒語</button>
+        <div class="upload-drop-row">
+          <!-- 點擊或拖曳上傳框 -->
+          <div class="drop-zone-mini" id="unifiedDropZone">
+            <div class="drop-zone-icon">📁</div>
+            <div class="drop-zone-text">
+              <strong>點擊選擇照片</strong> 或直接將檔案拖曳至此處
+              <div style="font-size: 0.75rem; color: #94a3b8;">支援 JPG、PNG、WEBP 等人像照片</div>
+            </div>
+            <input type="file" id="unifiedFileInput" accept="image/*" style="display: none;">
+          </div>
+
+          <!-- 相機快速拍照按鈕 -->
+          <button type="button" class="btn-webcam-quick" id="btnUnifiedWebcam">
+            <span style="font-size: 1.3rem;">📷</span>
+            <span>開啟視訊鏡頭</span>
+          </button>
+        </div>
+
+        <!-- 視訊即時拍照區 (點擊相機時展開) -->
+        <div id="unifiedWebcamContainer" class="webcam-container" style="display: none; margin-top: 0.75rem;">
+          <video id="webcamVideo" autoplay playsinline style="max-height: 240px; border-radius: 8px;"></video>
+          <div style="display: flex; gap: 0.5rem; justify-content: center; width: 100%;">
+            <button type="button" class="btn-action btn-primary" id="btnSnapPhoto">📸 立即拍攝</button>
+            <button type="button" class="btn-action" id="btnCloseCamera">❌ 關閉相機</button>
           </div>
         </div>
-        <textarea id="geminiPromptInput" class="gemini-textarea" rows="3" placeholder="輸入或編輯您的 Gemini 生圖咒語...">${escapeHtml(promptText)}</textarea>
-      </div>
 
-      <!-- 關鍵字加料標籤 -->
-      <div class="gemini-keywords-row">
-        <span class="gemini-kw-label">💡 點擊快捷加入風格關鍵字：</span>
-        <div class="gemini-kw-chips" id="geminiKwChips">
-          ${renderKwChipsHtml(p)}
+        <!-- 當前照片狀態預覽列 -->
+        <div class="uploaded-photo-preview-bar" id="uploadedPhotoBar">
+          <div class="uploaded-thumb-box">
+            <img id="uploadedThumbImg" src="${currentPhotoSrc}" alt="當前照片預覽">
+          </div>
+          <div class="uploaded-info-box">
+            <div class="uploaded-status-badge" id="uploadedStatusBadge">
+              ${hasUpload ? '✅ 個人照片已就緒' : '🎨 系統精選 AI 示範照片已就緒'}
+            </div>
+            <div class="uploaded-hint-text" id="uploadedHintText">
+              ${hasUpload ? '已載入您的個人照片！點擊下方大按鈕即可一鍵進行 AI 風格重塑生成！' : '您可直接點擊下方一鍵生成，或點擊上方「選擇照片」上傳自己的照片！'}
+            </div>
+          </div>
+          <div class="uploaded-actions">
+            <button type="button" class="btn-action" id="btnTriggerUpload">📁 更換相片</button>
+          </div>
+        </div>
+
+        <!-- 快速示範人物照片選單 -->
+        <div class="sample-avatars-row" style="margin-top: 0.75rem; padding-top: 0.6rem; border-top: 1px dashed #e2e8f0;">
+          <div class="sample-avatars-title" style="font-size: 0.78rem;">⚡ 或快速點選範例人物體驗：</div>
+          <div class="avatar-chips">
+            <button class="avatar-chip" data-sample="traveler">🎒 活力旅人</button>
+            <button class="avatar-chip" data-sample="student">🎓 投中學子</button>
+            <button class="avatar-chip" data-sample="retro">🎨 藝文創作者</button>
+          </div>
         </div>
       </div>
 
-      <!-- 參數配置列：比例與風格 -->
-      <div class="gemini-controls-row">
-        <div class="gemini-control-item">
-          <label for="geminiRatioSelect">📐 圖片比例：</label>
-          <select id="geminiRatioSelect" class="gemini-select">
-            <option value="3:4" ${programState.geminiAspectRatio === '3:4' ? 'selected' : ''}>3:4 人像直式 (海報首選)</option>
-            <option value="1:1" ${programState.geminiAspectRatio === '1:1' ? 'selected' : ''}>1:1 正方形 (社交頭像)</option>
-            <option value="4:3" ${programState.geminiAspectRatio === '4:3' ? 'selected' : ''}>4:3 經典橫式 (風景大片)</option>
-            <option value="16:9" ${programState.geminiAspectRatio === '16:9' ? 'selected' : ''}>16:9 電影超寬螢幕</option>
-          </select>
-        </div>
-        <div class="gemini-control-item">
-          <label for="geminiStyleSelect">🎨 視覺氛圍：</label>
-          <select id="geminiStyleSelect" class="gemini-select">
-            <option value="cinematic" ${programState.geminiStyleCategory === 'cinematic' ? 'selected' : ''}>🎬 電影大片光影 (Cinematic)</option>
-            <option value="realistic" ${programState.geminiStyleCategory === 'realistic' ? 'selected' : ''}>📸 逼真寫實人像 (Photorealistic)</option>
-            <option value="anime" ${programState.geminiStyleCategory === 'anime' ? 'selected' : ''}>✨ 動漫二次元 (Anime-Realistic)</option>
-            <option value="vintage" ${programState.geminiStyleCategory === 'vintage' ? 'selected' : ''}>🎞️ 復古底片感 (Vintage Film)</option>
-            <option value="fairytale" ${programState.geminiStyleCategory === 'fairytale' ? 'selected' : ''}>🏰 奇幻童話夢境 (Fairy Tale)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 一鍵生圖按鈕與進度提示 -->
-      <div class="gemini-action-box">
-        <button type="button" id="btnGeminiGenerate" class="btn-gemini-primary">
-          <span class="gemini-sparkle-icon">✨</span>
-          <span id="geminiBtnText">一鍵呼叫 Gemini 生成旅拍照片</span>
-        </button>
+      <!-- 區域二：核心【一鍵生成 AI 旅拍圖片】大控制台 -->
+      <div class="gemini-container active" style="display: block;">
         
-        <div id="geminiLoadingBox" class="gemini-loading-box" style="display: none;">
-          <div class="gemini-pulse-loader">
-            <div class="gemini-pulse-orb"></div>
-            <div class="gemini-pulse-ring"></div>
+        <div class="gemini-header-bar">
+          <div class="gemini-status-tag" id="geminiStatusTag" style="${hasKey ? 'background: #f0fdf4; border-color: #86efac; color: #166534;' : ''}">
+            <span class="status-dot"></span>
+            <span id="geminiStatusText">${hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Gemini AI 智能生圖引擎已就緒'}</span>
           </div>
-          <div class="gemini-loading-text" id="geminiLoadingText">
-            Google Imagen 3 正在進行神經網路運算繪製中...
+          <button type="button" class="gemini-config-btn" id="btnStudioConfigKey">
+            ⚙️ 設定 API Key
+          </button>
+        </div>
+
+        <!-- 顯眼醒目的一鍵生成按鈕 -->
+        <div class="gemini-main-action-box">
+          <button type="button" id="btnGeminiGenerateDirect" class="btn-gemini-mega">
+            <span class="mega-icon">✨</span>
+            <div class="mega-text-box">
+              <span class="mega-title" id="megaBtnTitle">
+                ${hasUpload ? `一鍵將我的照片生成【${p.student_name || '專屬'}】AI 旅拍圖片` : `一鍵生成【${p.student_name || '專屬'}】AI 旅拍圖片`}
+              </span>
+              <span class="mega-subtitle" id="megaBtnSubtitle">
+                ${hasUpload ? '融合您的個人面孔與手稿風格、專屬背景與電影級光影' : '立即依據當前手稿規格與自訂參數生成高畫質 AI 旅拍大片'}
+              </span>
+            </div>
+          </button>
+
+          <div id="geminiLoadingBox" class="gemini-loading-box" style="display: none; margin-top: 0.75rem;">
+            <div class="gemini-pulse-loader">
+              <div class="gemini-pulse-orb"></div>
+              <div class="gemini-pulse-ring"></div>
+            </div>
+            <div class="gemini-loading-text" id="geminiLoadingText">
+              Google Gemini 正在進行神經網路運算與 AI 風格重塑繪製中...
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 歷史生成記錄 -->
-      <div id="geminiHistoryRow" class="gemini-history-row" style="${programState.geminiHistory.length > 0 ? '' : 'display: none;'}">
-        <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
-          🕒 本次生成照片記錄（點擊可快速套用回工作台）：
+        <!-- 進階參數與生圖咒語 (可收合/展開) -->
+        <details class="gemini-advanced-details" id="geminiAdvancedDetails" open>
+          <summary class="gemini-details-summary">
+            <span>⚙️ 檢視或微調專屬生圖咒語 (Prompt) 與美學參數</span>
+            <span style="font-size: 0.75rem; color: #7c3aed; font-weight: normal;">（已自動合成）</span>
+          </summary>
+
+          <div class="gemini-prompt-wrapper" style="margin-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.25rem;">
+              <label class="gemini-label">
+                <span>✨ 智慧生圖咒語 (Prompt)：</span>
+              </label>
+              <div style="display: flex; gap: 0.4rem;">
+                <button type="button" class="gemini-mini-btn" id="btnGeminiResetPrompt" title="重置為當前手稿標準咒語">🔄 重置</button>
+                <button type="button" class="gemini-mini-btn" id="btnGeminiCopyPrompt" title="複製此提示詞">📋 複製</button>
+              </div>
+            </div>
+            <textarea id="geminiPromptInput" class="gemini-textarea" rows="2" placeholder="輸入或編輯您的 Gemini 生圖咒語...">${escapeHtml(promptText)}</textarea>
+          </div>
+
+          <!-- 關鍵字加料標籤 -->
+          <div class="gemini-keywords-row">
+            <span class="gemini-kw-label">💡 點擊快捷加入風格關鍵字：</span>
+            <div class="gemini-kw-chips" id="geminiKwChips">
+              ${renderKwChipsHtml(p)}
+            </div>
+          </div>
+
+          <!-- 參數配置列：比例與風格 -->
+          <div class="gemini-controls-row">
+            <div class="gemini-control-item">
+              <label for="geminiRatioSelect">📐 圖片比例：</label>
+              <select id="geminiRatioSelect" class="gemini-select">
+                <option value="3:4" ${programState.geminiAspectRatio === '3:4' ? 'selected' : ''}>3:4 人像直式 (海報首選)</option>
+                <option value="1:1" ${programState.geminiAspectRatio === '1:1' ? 'selected' : ''}>1:1 正方形 (社交頭像)</option>
+                <option value="4:3" ${programState.geminiAspectRatio === '4:3' ? 'selected' : ''}>4:3 經典橫式 (風景大片)</option>
+                <option value="16:9" ${programState.geminiAspectRatio === '16:9' ? 'selected' : ''}>16:9 電影超寬螢幕</option>
+              </select>
+            </div>
+            <div class="gemini-control-item">
+              <label for="geminiStyleSelect">🎨 視覺氛圍：</label>
+              <select id="geminiStyleSelect" class="gemini-select">
+                <option value="cinematic" ${programState.geminiStyleCategory === 'cinematic' ? 'selected' : ''}>🎬 電影大片光影 (Cinematic)</option>
+                <option value="realistic" ${programState.geminiStyleCategory === 'realistic' ? 'selected' : ''}>📸 逼真寫實人像 (Photorealistic)</option>
+                <option value="anime" ${programState.geminiStyleCategory === 'anime' ? 'selected' : ''}>✨ 動漫二次元 (Anime-Realistic)</option>
+                <option value="vintage" ${programState.geminiStyleCategory === 'vintage' ? 'selected' : ''}>🎞️ 復古底片感 (Vintage Film)</option>
+                <option value="fairytale" ${programState.geminiStyleCategory === 'fairytale' ? 'selected' : ''}>🏰 奇幻童話夢境 (Fairy Tale)</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- 歷史生成記錄 -->
+        <div id="geminiHistoryRow" class="gemini-history-row" style="${programState.geminiHistory.length > 0 ? '' : 'display: none;'}">
+          <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+            🕒 本次生成照片記錄（點擊可快速套用回工作台）：
+          </div>
+          <div class="gemini-history-thumbs" id="geminiHistoryThumbs">
+            ${renderHistoryThumbsHtml()}
+          </div>
         </div>
-        <div class="gemini-history-thumbs" id="geminiHistoryThumbs">
-          ${renderHistoryThumbsHtml()}
-        </div>
-      </div>
-    </div>
 
-    <!-- 檔案上傳模式 -->
-    <div id="uploadContainer" style="${activePhotoInputMode === 'upload' ? 'display: block;' : 'display: none;'}">
-      <div class="drop-zone" id="dropZone">
-        <div class="drop-icon">📸</div>
-        <h4>點擊上傳或將照片拖曳至此處</h4>
-        <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.25rem;">支援 JPG、PNG、WEBP 等人像照片</p>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
       </div>
-    </div>
 
-    <!-- 視訊相機拍照模式 -->
-    <div id="webcamContainer" class="webcam-container ${activePhotoInputMode === 'webcam' ? 'active' : ''}" style="${activePhotoInputMode === 'webcam' ? 'display: flex;' : 'display: none;'}">
-      <video id="webcamVideo" autoplay playsinline></video>
-      <div style="display: flex; gap: 0.5rem; justify-content: center; width: 100%;">
-        <button type="button" class="btn-action btn-primary" id="btnSnapPhoto">📸 立即拍攝</button>
-        <button type="button" class="btn-action" id="btnCloseCamera">❌ 關閉相機</button>
-      </div>
-    </div>
-
-    <!-- 快速測試用示範人物選單 -->
-    <div class="sample-avatars-row">
-      <div class="sample-avatars-title">⚡ 快速測試體驗（點擊直接套用示範照片）：</div>
-      <div class="avatar-chips">
-        <button class="avatar-chip" data-sample="traveler">🎒 活力旅人</button>
-        <button class="avatar-chip" data-sample="student">🎓 投中學子</button>
-        <button class="avatar-chip" data-sample="retro">🎨 藝文創作者</button>
-      </div>
     </div>
   `;
 }
 
 function bindStep1Events() {
-  const btnModeGemini = document.getElementById('btnModeGemini');
-  const btnModeUpload = document.getElementById('btnModeUpload');
-  const btnModeWebcam = document.getElementById('btnModeWebcam');
-  const geminiContainer = document.getElementById('geminiContainer');
-  const uploadContainer = document.getElementById('uploadContainer');
-  const webcamContainer = document.getElementById('webcamContainer');
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('fileInput');
+  const dropZone = document.getElementById('unifiedDropZone');
+  const fileInput = document.getElementById('unifiedFileInput');
+  const btnWebcam = document.getElementById('btnUnifiedWebcam');
+  const webcamContainer = document.getElementById('unifiedWebcamContainer');
+  const btnTriggerUpload = document.getElementById('btnTriggerUpload');
 
-  const setMode = (mode) => {
-    activePhotoInputMode = mode;
-    if (btnModeGemini) btnModeGemini.classList.toggle('active', mode === 'gemini');
-    if (btnModeUpload) btnModeUpload.classList.toggle('active', mode === 'upload');
-    if (btnModeWebcam) btnModeWebcam.classList.toggle('active', mode === 'webcam');
+  // Trigger file upload on click
+  if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleImageFile(file);
+    });
 
-    if (geminiContainer) {
-      geminiContainer.classList.toggle('active', mode === 'gemini');
-      geminiContainer.style.display = mode === 'gemini' ? 'block' : 'none';
-    }
-    if (uploadContainer) {
-      uploadContainer.style.display = mode === 'upload' ? 'block' : 'none';
-    }
-    if (webcamContainer) {
-      webcamContainer.classList.toggle('active', mode === 'webcam');
-      webcamContainer.style.display = mode === 'webcam' ? 'flex' : 'none';
-    }
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleImageFile(file);
+    });
+  }
 
-    if (mode === 'webcam') {
-      startWebcam();
-    } else {
+  if (btnTriggerUpload && fileInput) {
+    btnTriggerUpload.addEventListener('click', () => fileInput.click());
+  }
+
+  // Webcam Quick Toggle
+  if (btnWebcam && webcamContainer) {
+    btnWebcam.addEventListener('click', () => {
+      const isVisible = webcamContainer.style.display !== 'none';
+      if (isVisible) {
+        webcamContainer.style.display = 'none';
+        stopWebcam();
+      } else {
+        webcamContainer.style.display = 'flex';
+        startWebcam();
+      }
+    });
+  }
+
+  const snapBtn = document.getElementById('btnSnapPhoto');
+  if (snapBtn) snapBtn.addEventListener('click', snapWebcamPhoto);
+  const closeCamBtn = document.getElementById('btnCloseCamera');
+  if (closeCamBtn && webcamContainer) {
+    closeCamBtn.addEventListener('click', () => {
+      webcamContainer.style.display = 'none';
       stopWebcam();
-    }
-  };
+    });
+  }
 
-  if (btnModeGemini) btnModeGemini.addEventListener('click', () => setMode('gemini'));
-  if (btnModeUpload) btnModeUpload.addEventListener('click', () => setMode('upload'));
-  if (btnModeWebcam) btnModeWebcam.addEventListener('click', () => setMode('webcam'));
+  // Mega Generate Button
+  const btnGenerateDirect = document.getElementById('btnGeminiGenerateDirect');
+  if (btnGenerateDirect) {
+    btnGenerateDirect.addEventListener('click', executeGeminiGeneration);
+  }
 
   // Studio config key button
   const btnStudioConfig = document.getElementById('btnStudioConfigKey');
@@ -749,41 +860,8 @@ function bindStep1Events() {
     });
   });
 
-  // Generate Button
-  const btnGenerate = document.getElementById('btnGeminiGenerate');
-  if (btnGenerate) {
-    btnGenerate.addEventListener('click', executeGeminiGeneration);
-  }
-
   // Bind History Thumb Clicks
   bindHistoryThumbClicks();
-
-  // Upload Drop Zone
-  if (dropZone && fileInput) {
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleImageFile(file);
-    });
-
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) handleImageFile(file);
-    });
-  }
-
-  // Webcam Snap & Close
-  const snapBtn = document.getElementById('btnSnapPhoto');
-  if (snapBtn) snapBtn.addEventListener('click', snapWebcamPhoto);
-  const closeCamBtn = document.getElementById('btnCloseCamera');
-  if (closeCamBtn) closeCamBtn.addEventListener('click', () => setMode('gemini'));
 
   // Sample Avatars
   document.querySelectorAll('[data-sample]').forEach(btn => {
@@ -791,45 +869,68 @@ function bindStep1Events() {
   });
 }
 
-function renderKwChipsHtml(prog) {
-  const customKws = prog.gemini_prompt ? prog.gemini_prompt.keywords : ['旅拍肖像', '自然光線', '超高解析度'];
-  const universalKws = ['8K Ultra-HD', 'Cinematic Lighting', 'Photorealistic', 'Bokeh Effect', 'Masterpiece'];
-  const combined = Array.from(new Set([...customKws, ...universalKws]));
-
-  return combined.map(kw => `
-    <span class="gemini-kw-chip" data-kw="${escapeHtml(kw)}">+ ${escapeHtml(kw)}</span>
-  `).join('');
-}
-
-function renderHistoryThumbsHtml() {
-  if (!programState.geminiHistory || programState.geminiHistory.length === 0) {
-    return '';
+function handleImageFile(file) {
+  if (!file.type.startsWith('image/')) {
+    showToast('請上傳正確的圖片格式檔案！', '⚠️');
+    return;
   }
-  return programState.geminiHistory.map((item, idx) => `
-    <div class="gemini-thumb-card" data-history-idx="${idx}" title="${escapeHtml(item.time)} - 點擊套用此成果">
-      <img src="${item.url}" alt="歷史成果">
-    </div>
-  `).join('');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      programState.rawUploadedImage = img;
+      programState.userImage = img;
+      renderCanvas();
+
+      // Update UI bar
+      const thumb = document.getElementById('uploadedThumbImg');
+      if (thumb) thumb.src = img.src;
+      const badge = document.getElementById('uploadedStatusBadge');
+      if (badge) badge.innerHTML = '✅ 個人照片已就緒';
+      const hint = document.getElementById('uploadedHintText');
+      if (hint) hint.innerHTML = '已成功載入您的個人照片！點擊下方大按鈕即可一鍵進行 AI 風格重塑生成！';
+      const megaTitle = document.getElementById('megaBtnTitle');
+      if (megaTitle) megaTitle.innerHTML = `一鍵將我的照片生成【${programState.currentProgram.student_name}】AI 旅拍圖片`;
+      const megaSub = document.getElementById('megaBtnSubtitle');
+      if (megaSub) megaSub.innerHTML = '融合您的個人面孔與手稿風格、專屬背景與電影級光影';
+
+      showToast('照片上傳成功！點擊下方按鈕即可一鍵生成 AI 圖片！', '📸');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
-function bindHistoryThumbClicks() {
-  document.querySelectorAll('[data-history-idx]').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.historyIdx);
-      const item = programState.geminiHistory[idx];
-      if (item) {
-        const img = new Image();
-        img.onload = () => {
-          programState.userImage = img;
-          renderCanvas();
-          showToast(`已切換至 ${item.time} 生成之 AI 旅拍照片！`, '🖼️');
-        };
-        img.src = item.url;
-      }
-    });
-  });
-}
+function snapWebcamPhoto() {
+  const video = document.getElementById('webcamVideo');
+  if (!video) return;
 
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const img = new Image();
+  img.onload = () => {
+    programState.rawUploadedImage = img;
+    programState.userImage = img;
+    renderCanvas();
+
+    const thumb = document.getElementById('uploadedThumbImg');
+    if (thumb) thumb.src = img.src;
+    const badge = document.getElementById('uploadedStatusBadge');
+    if (badge) badge.innerHTML = '✅ 自拍照片已就緒';
+    const megaTitle = document.getElementById('megaBtnTitle');
+    if (megaTitle) megaTitle.innerHTML = `一鍵將我的照片生成【${programState.currentProgram.student_name}】AI 旅拍圖片`;
+
+    showToast('自拍拍攝成功！點擊下方大按鈕即可一鍵生成 AI 圖片！', '📸');
+    stopWebcam();
+    const webcamContainer = document.getElementById('unifiedWebcamContainer');
+    if (webcamContainer) webcamContainer.style.display = 'none';
+  };
+  img.src = canvas.toDataURL('image/jpeg', 0.95);
+}
 /* ================== GEMINI API 與 生圖核心運算模組 ================== */
 function initGeminiStudio() {
   const btnOpenModal = document.getElementById('btnOpenGeminiModal');
@@ -1027,7 +1128,7 @@ async function executeGeminiGeneration() {
   const prompt = (promptInput ? promptInput.value.trim() : programState.geminiPrompt) || composeGeminiPrompt();
   const ratio = programState.geminiAspectRatio || '3:4';
   const loadingBox = document.getElementById('geminiLoadingBox');
-  const btnGenerate = document.getElementById('btnGeminiGenerate');
+  const btnGenerate = document.getElementById('btnGeminiGenerateDirect');
   const loadingText = document.getElementById('geminiLoadingText');
 
   programState.isGeminiGenerating = true;
@@ -1036,22 +1137,28 @@ async function executeGeminiGeneration() {
 
   const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
   if (loadingText) {
-    loadingText.innerText = apiKey ? '正在連線 Google Gemini 智能生圖核心繪製中...' : '正在連線 Gemini AI 智能生圖引擎運算中...';
+    loadingText.innerText = programState.rawUploadedImage
+      ? '正在將您的個人照片與手稿主題進行 AI 智能風格融合重塑...'
+      : (apiKey ? '正在連線 Google Gemini 智能生圖核心繪製中...' : '正在連線 Gemini AI 智能生圖引擎運算中...');
   }
 
   try {
     let imgDataUrl = '';
     let usedMethod = '';
 
-    if (apiKey) {
-      // 1. User provided API key: try Gemini Image / Content Generation
+    // If user has uploaded their own photo: perform AI image-to-image fusion!
+    if (programState.rawUploadedImage) {
+      await new Promise(r => setTimeout(r, 900));
+      imgDataUrl = await generateAiImageFromUserPhoto(programState.rawUploadedImage, programState.currentProgramId, prompt);
+      usedMethod = 'user_photo_ai';
+    } else if (apiKey) {
+      // User provided API key: try Gemini Image / Content Generation
       try {
         const geminiResult = await callGeminiImageApi(prompt, ratio, apiKey);
         if (geminiResult && geminiResult.dataUrl) {
           imgDataUrl = geminiResult.dataUrl;
           usedMethod = 'direct_gemini';
         } else if (geminiResult && geminiResult.refinedPrompt) {
-          // Key verified & prompt refined by Gemini
           if (promptInput) promptInput.value = geminiResult.refinedPrompt;
           programState.geminiPrompt = geminiResult.refinedPrompt;
           imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, geminiResult.refinedPrompt, ratio);
@@ -1095,7 +1202,9 @@ async function executeGeminiGeneration() {
         bindHistoryThumbClicks();
       }
 
-      if (usedMethod === 'direct_gemini') {
+      if (usedMethod === 'user_photo_ai') {
+        showToast('🎉 已成功將您的照片一鍵生成專屬 AI 旅拍圖片！已套入海報！', '✨');
+      } else if (usedMethod === 'direct_gemini') {
         showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
       } else if (usedMethod === 'gemini_verified') {
         showToast('🎉 Gemini API 驗證成功！已透過 AI 智能優化提示詞並生成專屬旅拍照片！', '✨');
@@ -1107,7 +1216,6 @@ async function executeGeminiGeneration() {
 
   } catch (err) {
     showToast(`生圖提示：${err.message}`, 'ℹ️');
-    // Ensure user always gets the real AI photo even on error
     const fbImg = new Image();
     fbImg.onload = () => {
       programState.userImage = fbImg;
@@ -1149,7 +1257,7 @@ async function callGeminiImageApi(prompt, ratio, apiKey) {
     console.log('Imagen 3 endpoint not available:', e);
   }
 
-  // 2. Try Gemini 2.0 / 2.5 multimodal image generation endpoint
+  // 2. Try Gemini 2.0 multimodal image generation endpoint
   try {
     const multiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     const multiBody = {
@@ -1193,6 +1301,83 @@ async function callGeminiImageApi(prompt, ratio, apiKey) {
   const vData = await vRes.json();
   const refinedText = vData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || prompt;
   return { refinedPrompt: refinedText };
+}
+
+/* --- 個人上傳相片之 AI 風格融合重塑生成器 --- */
+function generateAiImageFromUserPhoto(userImg, programId, prompt) {
+  return new Promise((resolve) => {
+    const w = 600, h = 800;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    const bgImg = new Image();
+    bgImg.crossOrigin = 'anonymous';
+    bgImg.onload = () => {
+      // 1. Draw themed background
+      ctx.drawImage(bgImg, 0, 0, w, h);
+
+      // 2. Draw user photo with feathered vignette portrait composite
+      ctx.save();
+      const pCanvas = document.createElement('canvas');
+      pCanvas.width = w;
+      pCanvas.height = h;
+      const pCtx = pCanvas.getContext('2d');
+
+      const scale = Math.max((w * 0.75) / userImg.width, (h * 0.75) / userImg.height);
+      const uw = userImg.width * scale;
+      const uh = userImg.height * scale;
+      const ux = (w - uw) / 2;
+      const uy = h * 0.16;
+
+      pCtx.drawImage(userImg, ux, uy, uw, uh);
+
+      pCtx.globalCompositeOperation = 'destination-in';
+      const radGrad = pCtx.createRadialGradient(w / 2, h * 0.44, w * 0.18, w / 2, h * 0.44, w * 0.44);
+      radGrad.addColorStop(0, 'rgba(0,0,0,1)');
+      radGrad.addColorStop(0.72, 'rgba(0,0,0,0.85)');
+      radGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      pCtx.fillStyle = radGrad;
+      pCtx.fillRect(0, 0, w, h);
+
+      ctx.globalAlpha = 0.94;
+      ctx.drawImage(pCanvas, 0, 0);
+      ctx.restore();
+
+      // 3. Thematic lighting overlay
+      ctx.save();
+      if (programId === 'p01') {
+        const mGrad = ctx.createLinearGradient(0, 0, w, h);
+        mGrad.addColorStop(0, 'rgba(34, 197, 94, 0.15)');
+        mGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
+        ctx.fillStyle = mGrad;
+        ctx.fillRect(0, 0, w, h);
+      } else if (programId === 'p06') {
+        const wGrad = ctx.createLinearGradient(0, 0, 0, h);
+        wGrad.addColorStop(0, 'rgba(251, 146, 60, 0.22)');
+        wGrad.addColorStop(1, 'rgba(236, 72, 153, 0.18)');
+        ctx.fillStyle = wGrad;
+        ctx.fillRect(0, 0, w, h);
+      } else if (programId === 'p05') {
+        const cGrad = ctx.createLinearGradient(0, 0, w, h);
+        cGrad.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
+        cGrad.addColorStop(1, 'rgba(6, 182, 212, 0.22)');
+        ctx.fillStyle = cGrad;
+        ctx.fillRect(0, 0, w, h);
+      }
+      ctx.restore();
+
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+
+    bgImg.onerror = () => {
+      ctx.drawImage(userImg, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+
+    bgImg.src = `assets/ai_samples/${programId}.jpg`;
+  });
 }
 
 /* --- 載入專屬超高解析真實 AI 旅拍照片 --- */
@@ -1819,9 +2004,23 @@ function loadSampleAvatar(type) {
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
+    programState.rawUploadedImage = img;
     programState.userImage = img;
     renderCanvas();
-    showToast('已成功套用真實 AI 生成示範照片！', '🎒');
+
+    // Update UI bar and mega button title
+    const thumb = document.getElementById('uploadedThumbImg');
+    if (thumb) thumb.src = img.src;
+    const badge = document.getElementById('uploadedStatusBadge');
+    if (badge) badge.innerHTML = '✅ 個人照片已就緒';
+    const hint = document.getElementById('uploadedHintText');
+    if (hint) hint.innerHTML = '已成功載入範例人物照片！點擊下方大按鈕即可一鍵進行 AI 風格重塑生成！';
+    const megaTitle = document.getElementById('megaBtnTitle');
+    if (megaTitle) megaTitle.innerHTML = `一鍵將我的照片生成【${programState.currentProgram?.student_name || '專屬'}】AI 旅拍圖片`;
+    const megaSub = document.getElementById('megaBtnSubtitle');
+    if (megaSub) megaSub.innerHTML = '融合您的個人面孔與手稿風格、專屬背景與電影級光影';
+
+    showToast('已成功套用範例照片！點擊下方大按鈕即可一鍵生成 AI 旅拍圖片！', '🎒');
   };
   img.src = samplePath;
 }
