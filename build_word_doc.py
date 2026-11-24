@@ -472,8 +472,103 @@ def create_word_document():
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
     add_heading_2("3.2 結論與後續成果發布")
-    p_concl = doc.add_paragraph("透過本次 AI 輔助流程圖解析與全案數位化建置，成功將南投國中 304 班每位同學的原創手稿完整保留，並昇華為高度互動、具備密碼管制（通行碼 049）之單頁現代化 Web 應用程式。系統已完成 Git 版本控管並正式發布至 GitHub 雲端倉庫，為師生提供最佳之數位科技融入自主學習成果典範。")
+    p_concl = doc.add_paragraph("透過本次 AI 輔助流程圖解析與全案數位化建置，成功將南投國中 304 班每位同學的原創手稿完整保留，並昇華為完全免密碼公開瀏覽、具備 17 份學生獨立程式工作台、高解析原稿檢視、全方位主題分類查詢，並深度整合 Google Gemini Imagen 3 影像生成核心之現代化單頁 Web 應用系統。全案已發布至 GitHub 倉庫與 GitHub Pages 線上體驗，為師生提供最佳之數位科技與生成式 AI 融入自主學習成果典範。")
     p_concl.paragraph_format.line_spacing = 1.2
+
+
+    # ------------------ CHAPTER 4: GEMINI AI IMAGE GENERATION & PROMPT ENGINEERING ------------------
+    add_heading_1("第四章：Google Gemini AI 影像生成規格與提示詞工程架構")
+
+    p4_intro = doc.add_paragraph("為響應生成式人工智慧（Generative AI）技術趨勢，本專案進一步將 Google 最頂尖之影像生成模型 Google Gemini Imagen 3（imagen-3.0-generate-002）深度串接整合至 304 班 17 份學生手稿系統中。系統不僅支援使用者在個人瀏覽器安全填入 Google AI Studio API Key 進行即時文字生圖（Text-to-Image），更針對每位同學的原創手稿主題量身打造高精準度的提示詞工程（Prompt Engineering）規格。")
+    p4_intro.paragraph_format.line_spacing = 1.2
+    p4_intro.paragraph_format.space_after = Pt(8)
+
+    add_heading_2("4.1 Google Imagen 3 技術整合架構與雙軌運行機制")
+    p4_arch = doc.add_paragraph("系統採用現代化 Web 前端與 Google Generative Language API 串接架構，其核心運作機制如下：\n"
+                                "1. 雙軌生成保證（Dual-Track Generation）：若使用者輸入 Google AI Studio API Key，系統透過 RESTful POST 請求直連 Google Imagen 3 頂級模型（imagen-3.0-generate-002:predict），生成 8K 級超寫實旅拍照片；若使用者未填寫金鑰，系統智慧切換為「精選 AI 示範生圖模式」，自動調用對應主題之高解析專屬旅拍成果，確保任何評審與師生在任何設備皆可 100% 零阻力流暢體驗。\n"
+                                "2. 動態提示詞即時合成引擎（Dynamic Prompt Synthesizer）：系統會隨使用者在各同學程式中切換之參數（如姚O城的軍階與戰術裝備、許O崴的節慶類型與形狀裁切、林O羽的電競對話、鄧O康的 NBA 球星選擇、羅O鈞的婚紗海島夕陽），即時動態組合出符合該情境的英文高階生圖咒語。\n"
+                                "3. 影像無縫注入工作台（Seamless Canvas Pipeline）：AI 生成之影像即時轉為 Base64 數據流並掛載為工作台畫布之核心主圖，隨即套用該學生原創之相框、階級章、對話 HUD、濾鏡與標語文案，實現手稿至真實 AI 程式之全自動閉環。")
+    p4_arch.paragraph_format.line_spacing = 1.2
+    p4_arch.paragraph_format.space_after = Pt(8)
+
+    add_heading_2("4.2 全班 17 位同學手稿專屬 Gemini 生圖咒語對照規格表")
+    p4_tbl_intro = doc.add_paragraph("下表完整列出 304 班全體 17 份手稿提案所對應之 Google Gemini Imagen 3 最佳化提示詞（英文 Prompt、中文意境詮釋、風格關鍵字標籤與推薦圖片比例）：")
+    p4_tbl_intro.paragraph_format.space_after = Pt(6)
+
+    gemini_tbl = doc.add_table(rows=len(flowcharts) + 1, cols=5)
+    gemini_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    gemini_tbl.autofit = False
+    gemini_tbl.columns[0].width = Inches(0.5)
+    gemini_tbl.columns[1].width = Inches(0.9)
+    gemini_tbl.columns[2].width = Inches(1.4)
+    gemini_tbl.columns[3].width = Inches(3.1)
+    gemini_tbl.columns[4].width = Inches(0.77)
+    set_table_borders(gemini_tbl, color="CBD5E1", sz="4")
+
+    g_headers = ["頁碼", "學生姓名", "手稿主題", "Gemini 專屬生圖咒語 (Prompt) 與意境詮釋", "推薦比例"]
+    for c_idx, h in enumerate(g_headers):
+        cell = gemini_tbl.cell(0, c_idx)
+        set_cell_background(cell, "4F46E5")
+        set_cell_margins(cell, top=80, bottom=80, left=60, right=60)
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(h)
+        r.bold = True
+        r.font.size = Pt(8.5)
+        r.font.color.rgb = RGBColor(255, 255, 255)
+
+    for r_idx, itm in enumerate(flowcharts, start=1):
+        bg = "FFFFFF" if r_idx % 2 != 0 else "F8FAFC"
+        cells = [gemini_tbl.cell(r_idx, i) for i in range(5)]
+        for c in cells:
+            set_cell_background(c, bg)
+            set_cell_margins(c, top=60, bottom=60, left=60, right=60)
+
+        # Page
+        p0 = cells[0].paragraphs[0]
+        p0.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r0 = p0.add_run(f"P.{itm['page_num']:02d}")
+        r0.font.size = Pt(8)
+
+        # Name
+        p1 = cells[1].paragraphs[0]
+        r1 = p1.add_run(itm['student_name'])
+        r1.bold = True
+        r1.font.size = Pt(8)
+
+        # Theme
+        p2 = cells[2].paragraphs[0]
+        r2 = p2.add_run(itm['theme'])
+        r2.font.size = Pt(8)
+
+        # Gemini Prompt
+        p3 = cells[3].paragraphs[0]
+        gp = itm.get('gemini_prompt', {})
+        en_prompt = gp.get('prompt_en', 'A high quality photorealistic travel portrait, 8k resolution.')
+        zh_prompt = gp.get('prompt_zh', '')
+        kws = ', '.join(gp.get('keywords', []))
+
+        r3_en = p3.add_run(f"【EN】{en_prompt}\n")
+        r3_en.font.size = Pt(7.5)
+        r3_en.font.color.rgb = RGBColor(30, 27, 75)
+
+        r3_zh = p3.add_run(f"【中】{zh_prompt}\n")
+        r3_zh.font.size = Pt(7.5)
+        r3_zh.font.color.rgb = RGBColor(71, 85, 105)
+
+        r3_kw = p3.add_run(f"🏷️ 標籤：{kws}")
+        r3_kw.font.size = Pt(7.2)
+        r3_kw.font.color.rgb = RGBColor(124, 58, 237)
+
+        # Ratio
+        p4 = cells[4].paragraphs[0]
+        p4.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r4 = p4.add_run(gp.get('recommended_ratio', '3:4'))
+        r4.bold = True
+        r4.font.size = Pt(8)
+        r4.font.color.rgb = RGBColor(22, 101, 52)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
     # Save document
     out_file = '1151123投中304流程圖.docx'

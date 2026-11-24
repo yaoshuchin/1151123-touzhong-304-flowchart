@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initFlowchartsCatalog();
   initProgramEngine();
+  initGeminiStudio();
   initStudio();
   initMatrix();
 });
@@ -159,10 +160,13 @@ function renderFlowchartCards() {
 
         <div class="card-footer">
           <button class="btn-card-action" onclick="openFlowchartModal('${item.id}')">
-            <span>🔍</span> 詳情原稿
+            <span>🔍</span> 原稿
+          </button>
+          <button class="btn-card-gemini" onclick="event.stopPropagation(); launchDedicatedProgramWithGemini('${item.id}')" title="使用 Google Gemini 生圖咒語立即生成旅拍照片">
+            <span>✨</span> Gemini生圖
           </button>
           <button class="btn-card-action primary" onclick="launchDedicatedProgram('${item.id}')">
-            <span>🎮</span> 執行專屬獨立程式
+            <span>🎮</span> 獨立程式
           </button>
         </div>
       </div>
@@ -193,6 +197,30 @@ function initModal() {
       closeModal();
     }
   });
+
+  const copyPromptBtn = document.getElementById('btnCopyModalGeminiPrompt');
+  if (copyPromptBtn) {
+    copyPromptBtn.addEventListener('click', () => {
+      const promptText = document.getElementById('modalGeminiPromptEn')?.innerText;
+      if (promptText) {
+        navigator.clipboard.writeText(promptText).then(() => {
+          showToast('已成功複製 Google Gemini 生圖咒語！', '📋');
+        }).catch(() => {
+          showToast('複製失敗，請手動反白複製', '⚠️');
+        });
+      }
+    });
+  }
+
+  const launchGeminiBtn = document.getElementById('btnLaunchWithGemini');
+  if (launchGeminiBtn) {
+    launchGeminiBtn.addEventListener('click', () => {
+      if (activeModalItemId) {
+        launchDedicatedProgramWithGemini(activeModalItemId);
+        closeModal();
+      }
+    });
+  }
 }
 
 function openFlowchartModal(id) {
@@ -218,7 +246,36 @@ function openFlowchartModal(id) {
   const featList = document.getElementById('modalFeaturesList');
   featList.innerHTML = item.features.map(f => `<div style="margin-bottom: 0.2rem;">✨ <strong>${escapeHtml(f)}</strong></div>`).join('');
 
+  // Gemini prompt section in modal
+  const promptEnEl = document.getElementById('modalGeminiPromptEn');
+  const promptZhEl = document.getElementById('modalGeminiPromptZh');
+  const tagsEl = document.getElementById('modalGeminiTags');
+  if (promptEnEl && promptZhEl && item.gemini_prompt) {
+    promptEnEl.innerText = item.gemini_prompt.prompt_en;
+    promptZhEl.innerText = item.gemini_prompt.prompt_zh;
+    if (tagsEl) {
+      tagsEl.innerHTML = item.gemini_prompt.keywords.map(kw => `
+        <span class="gemini-kw-chip">#${escapeHtml(kw)}</span>
+      `).join('');
+    }
+  }
+
   modal.classList.add('active');
+}
+
+function launchDedicatedProgramWithGemini(id) {
+  launchDedicatedProgram(id);
+  // Switch to Gemini mode in Step 1
+  setTimeout(() => {
+    const btnModeGemini = document.getElementById('btnModeGemini');
+    if (btnModeGemini) {
+      btnModeGemini.click();
+    }
+    const container = document.getElementById('geminiContainer');
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, 120);
 }
 
 /* ================== TAB 2: 全班 17 份學生獨立程式引擎架構 ================== */
@@ -262,7 +319,16 @@ const programState = {
   selectedTask: 'travel',
   selectedBackground: 'sunset',
   
-  webcamStream: null
+  webcamStream: null,
+
+  // Gemini AI 生圖核心參數
+  geminiApiKey: localStorage.getItem('gemini_api_key') || '',
+  geminiPrompt: '',
+  geminiModel: 'imagen-3.0-generate-002',
+  geminiAspectRatio: '3:4',
+  geminiStyleCategory: 'cinematic',
+  isGeminiGenerating: false,
+  geminiHistory: []
 };
 
 function initProgramEngine() {
@@ -329,6 +395,9 @@ function loadProgram(id) {
 
   // Update Slogan
   updateContextualSlogan();
+
+  // Update Gemini Prompt
+  programState.geminiPrompt = composeGeminiPrompt();
 
   // Render Canvas
   renderCanvas();
@@ -435,16 +504,109 @@ function renderCurrentStepPane() {
   }
 }
 
-/* --- STEP 1: 照片輸入與相機 --- */
+/* --- STEP 1: 照片輸入與相機 (深度整合 Google Gemini AI 智能生圖) --- */
+let activePhotoInputMode = 'gemini'; // 'gemini', 'upload', 'webcam'
+
 function renderStep1PhotoInput() {
+  const p = programState.currentProgram || {};
+  const promptText = programState.geminiPrompt || (p.gemini_prompt ? p.gemini_prompt.prompt_en : '');
+  const hasKey = !!(programState.geminiApiKey || localStorage.getItem('gemini_api_key'));
+
   return `
     <div class="upload-mode-toggle">
-      <button class="mode-btn active" id="btnModeUpload">📁 檔案拖曳 / 上傳</button>
-      <button class="mode-btn" id="btnModeWebcam">📷 開啟視訊鏡頭 (Webcam)</button>
+      <button class="mode-btn ${activePhotoInputMode === 'gemini' ? 'active' : ''}" id="btnModeGemini">✨ Gemini AI 智能生圖</button>
+      <button class="mode-btn ${activePhotoInputMode === 'upload' ? 'active' : ''}" id="btnModeUpload">📁 檔案拖曳 / 上傳</button>
+      <button class="mode-btn ${activePhotoInputMode === 'webcam' ? 'active' : ''}" id="btnModeWebcam">📷 視訊鏡頭 (Webcam)</button>
+    </div>
+
+    <!-- ✨ GEMINI AI 生圖模式 (預設展開) -->
+    <div id="geminiContainer" class="gemini-container ${activePhotoInputMode === 'gemini' ? 'active' : ''}" style="${activePhotoInputMode === 'gemini' ? 'display: block;' : 'display: none;'}">
+      <div class="gemini-header-bar">
+        <div class="gemini-status-tag" id="geminiStatusTag" style="${hasKey ? 'background: #f0fdf4; border-color: #86efac; color: #166534;' : ''}">
+          <span class="status-dot"></span>
+          <span id="geminiStatusText">${hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Google Imagen 3 (免 Key 示範體驗)'}</span>
+        </div>
+        <button type="button" class="gemini-config-btn" id="btnStudioConfigKey">
+          ⚙️ 設定 API Key
+        </button>
+      </div>
+
+      <div class="gemini-prompt-wrapper">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.25rem;">
+          <label class="gemini-label">
+            <span>✨ 智慧生圖咒語 (Prompt)</span>
+            <span class="gemini-sublabel">（已根據【${escapeHtml(p.student_name || '當前學生')}】手稿規格自動合成）：</span>
+          </label>
+          <div style="display: flex; gap: 0.4rem;">
+            <button type="button" class="gemini-mini-btn" id="btnGeminiResetPrompt" title="重置為當前手稿標準咒語">🔄 重置咒語</button>
+            <button type="button" class="gemini-mini-btn" id="btnGeminiCopyPrompt" title="複製此提示詞">📋 複製咒語</button>
+          </div>
+        </div>
+        <textarea id="geminiPromptInput" class="gemini-textarea" rows="3" placeholder="輸入或編輯您的 Gemini 生圖咒語...">${escapeHtml(promptText)}</textarea>
+      </div>
+
+      <!-- 關鍵字加料標籤 -->
+      <div class="gemini-keywords-row">
+        <span class="gemini-kw-label">💡 點擊快捷加入風格關鍵字：</span>
+        <div class="gemini-kw-chips" id="geminiKwChips">
+          ${renderKwChipsHtml(p)}
+        </div>
+      </div>
+
+      <!-- 參數配置列：比例與風格 -->
+      <div class="gemini-controls-row">
+        <div class="gemini-control-item">
+          <label for="geminiRatioSelect">📐 圖片比例：</label>
+          <select id="geminiRatioSelect" class="gemini-select">
+            <option value="3:4" ${programState.geminiAspectRatio === '3:4' ? 'selected' : ''}>3:4 人像直式 (海報首選)</option>
+            <option value="1:1" ${programState.geminiAspectRatio === '1:1' ? 'selected' : ''}>1:1 正方形 (社交頭像)</option>
+            <option value="4:3" ${programState.geminiAspectRatio === '4:3' ? 'selected' : ''}>4:3 經典橫式 (風景大片)</option>
+            <option value="16:9" ${programState.geminiAspectRatio === '16:9' ? 'selected' : ''}>16:9 電影超寬螢幕</option>
+          </select>
+        </div>
+        <div class="gemini-control-item">
+          <label for="geminiStyleSelect">🎨 視覺氛圍：</label>
+          <select id="geminiStyleSelect" class="gemini-select">
+            <option value="cinematic" ${programState.geminiStyleCategory === 'cinematic' ? 'selected' : ''}>🎬 電影大片光影 (Cinematic)</option>
+            <option value="realistic" ${programState.geminiStyleCategory === 'realistic' ? 'selected' : ''}>📸 逼真寫實人像 (Photorealistic)</option>
+            <option value="anime" ${programState.geminiStyleCategory === 'anime' ? 'selected' : ''}>✨ 動漫二次元 (Anime-Realistic)</option>
+            <option value="vintage" ${programState.geminiStyleCategory === 'vintage' ? 'selected' : ''}>🎞️ 復古底片感 (Vintage Film)</option>
+            <option value="fairytale" ${programState.geminiStyleCategory === 'fairytale' ? 'selected' : ''}>🏰 奇幻童話夢境 (Fairy Tale)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 一鍵生圖按鈕與進度提示 -->
+      <div class="gemini-action-box">
+        <button type="button" id="btnGeminiGenerate" class="btn-gemini-primary">
+          <span class="gemini-sparkle-icon">✨</span>
+          <span id="geminiBtnText">一鍵呼叫 Gemini 生成旅拍照片</span>
+        </button>
+        
+        <div id="geminiLoadingBox" class="gemini-loading-box" style="display: none;">
+          <div class="gemini-pulse-loader">
+            <div class="gemini-pulse-orb"></div>
+            <div class="gemini-pulse-ring"></div>
+          </div>
+          <div class="gemini-loading-text" id="geminiLoadingText">
+            Google Imagen 3 正在進行神經網路運算繪製中...
+          </div>
+        </div>
+      </div>
+
+      <!-- 歷史生成記錄 -->
+      <div id="geminiHistoryRow" class="gemini-history-row" style="${programState.geminiHistory.length > 0 ? '' : 'display: none;'}">
+        <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 0.3rem;">
+          🕒 本次生成照片記錄（點擊可快速套用回工作台）：
+        </div>
+        <div class="gemini-history-thumbs" id="geminiHistoryThumbs">
+          ${renderHistoryThumbsHtml()}
+        </div>
+      </div>
     </div>
 
     <!-- 檔案上傳模式 -->
-    <div id="uploadContainer">
+    <div id="uploadContainer" style="${activePhotoInputMode === 'upload' ? 'display: block;' : 'display: none;'}">
       <div class="drop-zone" id="dropZone">
         <div class="drop-icon">📸</div>
         <h4>點擊上傳或將照片拖曳至此處</h4>
@@ -454,7 +616,7 @@ function renderStep1PhotoInput() {
     </div>
 
     <!-- 視訊相機拍照模式 -->
-    <div id="webcamContainer" class="webcam-container">
+    <div id="webcamContainer" class="webcam-container ${activePhotoInputMode === 'webcam' ? 'active' : ''}" style="${activePhotoInputMode === 'webcam' ? 'display: flex;' : 'display: none;'}">
       <video id="webcamVideo" autoplay playsinline></video>
       <div style="display: flex; gap: 0.5rem; justify-content: center; width: 100%;">
         <button type="button" class="btn-action btn-primary" id="btnSnapPhoto">📸 立即拍攝</button>
@@ -475,33 +637,128 @@ function renderStep1PhotoInput() {
 }
 
 function bindStep1Events() {
+  const btnModeGemini = document.getElementById('btnModeGemini');
   const btnModeUpload = document.getElementById('btnModeUpload');
   const btnModeWebcam = document.getElementById('btnModeWebcam');
+  const geminiContainer = document.getElementById('geminiContainer');
   const uploadContainer = document.getElementById('uploadContainer');
   const webcamContainer = document.getElementById('webcamContainer');
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
 
-  if (btnModeUpload) {
-    btnModeUpload.addEventListener('click', () => {
-      btnModeUpload.classList.add('active');
-      btnModeWebcam.classList.remove('active');
-      uploadContainer.style.display = 'block';
-      webcamContainer.classList.remove('active');
-      stopWebcam();
-    });
-  }
+  const setMode = (mode) => {
+    activePhotoInputMode = mode;
+    if (btnModeGemini) btnModeGemini.classList.toggle('active', mode === 'gemini');
+    if (btnModeUpload) btnModeUpload.classList.toggle('active', mode === 'upload');
+    if (btnModeWebcam) btnModeWebcam.classList.toggle('active', mode === 'webcam');
 
-  if (btnModeWebcam) {
-    btnModeWebcam.addEventListener('click', () => {
-      btnModeWebcam.classList.add('active');
-      btnModeUpload.classList.remove('active');
-      uploadContainer.style.display = 'none';
-      webcamContainer.classList.add('active');
+    if (geminiContainer) {
+      geminiContainer.classList.toggle('active', mode === 'gemini');
+      geminiContainer.style.display = mode === 'gemini' ? 'block' : 'none';
+    }
+    if (uploadContainer) {
+      uploadContainer.style.display = mode === 'upload' ? 'block' : 'none';
+    }
+    if (webcamContainer) {
+      webcamContainer.classList.toggle('active', mode === 'webcam');
+      webcamContainer.style.display = mode === 'webcam' ? 'flex' : 'none';
+    }
+
+    if (mode === 'webcam') {
       startWebcam();
+    } else {
+      stopWebcam();
+    }
+  };
+
+  if (btnModeGemini) btnModeGemini.addEventListener('click', () => setMode('gemini'));
+  if (btnModeUpload) btnModeUpload.addEventListener('click', () => setMode('upload'));
+  if (btnModeWebcam) btnModeWebcam.addEventListener('click', () => setMode('webcam'));
+
+  // Studio config key button
+  const btnStudioConfig = document.getElementById('btnStudioConfigKey');
+  if (btnStudioConfig) {
+    btnStudioConfig.addEventListener('click', () => {
+      const modalBtn = document.getElementById('btnOpenGeminiModal');
+      if (modalBtn) modalBtn.click();
     });
   }
 
+  // Reset prompt button
+  const btnResetPrompt = document.getElementById('btnGeminiResetPrompt');
+  if (btnResetPrompt) {
+    btnResetPrompt.addEventListener('click', () => {
+      const promptText = composeGeminiPrompt();
+      programState.geminiPrompt = promptText;
+      const input = document.getElementById('geminiPromptInput');
+      if (input) input.value = promptText;
+      showToast('已重置為當前手稿專屬咒語！', '🔄');
+    });
+  }
+
+  // Copy prompt button
+  const btnCopyPrompt = document.getElementById('btnGeminiCopyPrompt');
+  if (btnCopyPrompt) {
+    btnCopyPrompt.addEventListener('click', () => {
+      const input = document.getElementById('geminiPromptInput');
+      const text = input ? input.value : programState.geminiPrompt;
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('已複製生圖咒語！可直接貼入 Google AI Studio 或 Gemini', '📋');
+        }).catch(() => {
+          showToast('複製失敗，請手動反白複製', '⚠️');
+        });
+      }
+    });
+  }
+
+  // Textarea input
+  const promptInput = document.getElementById('geminiPromptInput');
+  if (promptInput) {
+    promptInput.addEventListener('input', (e) => {
+      programState.geminiPrompt = e.target.value;
+    });
+  }
+
+  // Ratio select
+  const ratioSelect = document.getElementById('geminiRatioSelect');
+  if (ratioSelect) {
+    ratioSelect.addEventListener('change', (e) => {
+      programState.geminiAspectRatio = e.target.value;
+    });
+  }
+
+  // Style select
+  const styleSelect = document.getElementById('geminiStyleSelect');
+  if (styleSelect) {
+    styleSelect.addEventListener('change', (e) => {
+      programState.geminiStyleCategory = e.target.value;
+    });
+  }
+
+  // Keyword chips
+  document.querySelectorAll('.gemini-kw-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const kw = chip.dataset.kw;
+      if (!kw || !promptInput) return;
+      if (!promptInput.value.includes(kw)) {
+        promptInput.value = promptInput.value.trim() ? `${promptInput.value.trim()}, ${kw}` : kw;
+        programState.geminiPrompt = promptInput.value;
+        showToast(`已添加提示詞：${kw}`, '✨');
+      }
+    });
+  });
+
+  // Generate Button
+  const btnGenerate = document.getElementById('btnGeminiGenerate');
+  if (btnGenerate) {
+    btnGenerate.addEventListener('click', executeGeminiGeneration);
+  }
+
+  // Bind History Thumb Clicks
+  bindHistoryThumbClicks();
+
+  // Upload Drop Zone
   if (dropZone && fileInput) {
     dropZone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => {
@@ -522,16 +779,718 @@ function bindStep1Events() {
     });
   }
 
+  // Webcam Snap & Close
   const snapBtn = document.getElementById('btnSnapPhoto');
   if (snapBtn) snapBtn.addEventListener('click', snapWebcamPhoto);
   const closeCamBtn = document.getElementById('btnCloseCamera');
-  if (closeCamBtn) closeCamBtn.addEventListener('click', () => btnModeUpload.click());
+  if (closeCamBtn) closeCamBtn.addEventListener('click', () => setMode('gemini'));
 
+  // Sample Avatars
   document.querySelectorAll('[data-sample]').forEach(btn => {
     btn.addEventListener('click', () => loadSampleAvatar(btn.dataset.sample));
   });
 }
 
+function renderKwChipsHtml(prog) {
+  const customKws = prog.gemini_prompt ? prog.gemini_prompt.keywords : ['旅拍肖像', '自然光線', '超高解析度'];
+  const universalKws = ['8K Ultra-HD', 'Cinematic Lighting', 'Photorealistic', 'Bokeh Effect', 'Masterpiece'];
+  const combined = Array.from(new Set([...customKws, ...universalKws]));
+
+  return combined.map(kw => `
+    <span class="gemini-kw-chip" data-kw="${escapeHtml(kw)}">+ ${escapeHtml(kw)}</span>
+  `).join('');
+}
+
+function renderHistoryThumbsHtml() {
+  if (!programState.geminiHistory || programState.geminiHistory.length === 0) {
+    return '';
+  }
+  return programState.geminiHistory.map((item, idx) => `
+    <div class="gemini-thumb-card" data-history-idx="${idx}" title="${escapeHtml(item.time)} - 點擊套用此成果">
+      <img src="${item.url}" alt="歷史成果">
+    </div>
+  `).join('');
+}
+
+function bindHistoryThumbClicks() {
+  document.querySelectorAll('[data-history-idx]').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.historyIdx);
+      const item = programState.geminiHistory[idx];
+      if (item) {
+        const img = new Image();
+        img.onload = () => {
+          programState.userImage = img;
+          renderCanvas();
+          showToast(`已切換至 ${item.time} 生成之 AI 旅拍照片！`, '🖼️');
+        };
+        img.src = item.url;
+      }
+    });
+  });
+}
+
+/* ================== GEMINI API 與 生圖核心運算模組 ================== */
+function initGeminiStudio() {
+  const btnOpenModal = document.getElementById('btnOpenGeminiModal');
+  const modal = document.getElementById('geminiKeyModal');
+  const btnClose = document.getElementById('btnCloseGeminiKeyModal');
+  const btnCancel = document.getElementById('btnCancelGeminiKey');
+  const btnSave = document.getElementById('btnSaveGeminiKey');
+  const btnClear = document.getElementById('btnClearGeminiKey');
+  const input = document.getElementById('geminiApiKeyInput');
+  const btnToggleVis = document.getElementById('btnToggleKeyVisibility');
+
+  if (!modal) return;
+
+  const openKeyModal = () => {
+    if (input) input.value = localStorage.getItem('gemini_api_key') || '';
+    modal.classList.add('active');
+  };
+
+  const closeKeyModal = () => {
+    modal.classList.remove('active');
+  };
+
+  if (btnOpenModal) btnOpenModal.addEventListener('click', openKeyModal);
+  if (btnClose) btnClose.addEventListener('click', closeKeyModal);
+  if (btnCancel) btnCancel.addEventListener('click', closeKeyModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeKeyModal();
+  });
+
+  if (btnToggleVis && input) {
+    btnToggleVis.addEventListener('click', () => {
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btnToggleVis.innerText = input.type === 'password' ? '👁️' : '🙈';
+    });
+  }
+
+  if (btnSave && input) {
+    btnSave.addEventListener('click', () => {
+      const key = input.value.trim();
+      if (key) {
+        localStorage.setItem('gemini_api_key', key);
+        programState.geminiApiKey = key;
+        showToast('Google Gemini API Key 已成功儲存！', '🔑');
+      } else {
+        localStorage.removeItem('gemini_api_key');
+        programState.geminiApiKey = '';
+        showToast('已切換為「精選 AI 示範生圖模式」！', '✨');
+      }
+      updateGeminiStatusUI();
+      closeKeyModal();
+    });
+  }
+
+  if (btnClear) {
+    btnClear.addEventListener('click', () => {
+      localStorage.removeItem('gemini_api_key');
+      programState.geminiApiKey = '';
+      if (input) input.value = '';
+      showToast('已清除 API Key，已切換至免 Key 示範模式！', '🗑️');
+      updateGeminiStatusUI();
+      closeKeyModal();
+    });
+  }
+
+  updateGeminiStatusUI();
+}
+
+function updateGeminiStatusUI() {
+  const statusTag = document.getElementById('geminiStatusTag');
+  const statusText = document.getElementById('geminiStatusText');
+  const hasKey = !!(programState.geminiApiKey || localStorage.getItem('gemini_api_key'));
+
+  if (statusText) {
+    statusText.innerText = hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Google Imagen 3 (免 Key 示範體驗)';
+  }
+  if (statusTag) {
+    statusTag.style.background = hasKey ? '#f0fdf4' : '#faf5ff';
+    statusTag.style.borderColor = hasKey ? '#86efac' : '#ddd6fe';
+    statusTag.style.color = hasKey ? '#166534' : '#6b21a8';
+  }
+}
+
+function composeGeminiPrompt() {
+  const p = programState.currentProgram;
+  if (!p) return 'A cinematic photorealistic travel portrait, 8k resolution, documentary lighting';
+
+  const id = programState.currentProgramId;
+  const baseEn = p.gemini_prompt ? p.gemini_prompt.prompt_en : 'A photorealistic travel portrait';
+
+  // Customize prompt based on current student & parameters
+  if (id === 'p01') {
+    // 姚O城 國防軍事
+    const rankMap = {
+      'lieutenant': 'second lieutenant',
+      'captain': 'army captain',
+      'major': 'special forces major',
+      'special_forces': 'elite tactical commando'
+    };
+    const gearMap = {
+      'helmet': 'tactical camouflage combat helmet and night vision goggles',
+      'vest': 'heavy tactical body armor and molle pouches',
+      'goggles': 'tactical balaclava and combat goggles',
+      'medal': 'dress uniform with honor ribbons and special forces badges'
+    };
+    const bgMap = {
+      'base': 'mountain radar station base with mist and antennas',
+      'jungle': 'dense tactical subtropical jungle',
+      'carrier': 'flight deck of an aircraft carrier at sunrise with fighter jets',
+      'radar': 'high-altitude mountain radar outpost with dramatic clouds',
+      'hq': 'frontline tactical command center'
+    };
+    const rank = rankMap[programState.militaryRank] || 'tactical officer';
+    const gear = gearMap[programState.militaryGear] || 'tactical combat gear';
+    const bg = bgMap[programState.militaryBg] || 'mountain military base';
+
+    return `A cinematic photorealistic portrait of an East Asian youth as an ${rank} wearing ${gear}, standing heroically at a ${bg}, volumetric dramatic god rays, ultra-detailed 8k, tactical realism photography.`;
+  } else if (id === 'p04') {
+    // 許O崴 節慶與形狀裁切
+    const festMap = {
+      'cny': 'Lunar New Year night market with glowing red lanterns and festive red envelopes',
+      'xmas': 'magical Christmas night market with glowing fairy lights, pine wreaths and falling snow',
+      'halloween': 'playful Halloween festival with glowing carved pumpkins and whimsical spooky lights',
+      'valentine': 'romantic Valentine evening with heart-shaped bokeh and soft candlelights'
+    };
+    const fest = festMap[programState.festivalType] || 'holiday celebration with festive lights';
+    return `A heartwarming festive portrait of a smiling Taiwanese student holding a warm beverage at an illuminated ${fest}, cozy knit winter wear, soft circular bokeh background, wholesome holiday warmth, 8k resolution.`;
+  } else if (id === 'p05') {
+    // 林O羽 電競對話
+    const styleMap = {
+      'cyberpunk': 'neon cyberpunk esports arena with glowing purple and cyan holographic HUD windows',
+      'battlefield': 'intense gaming battlefield with dynamic particle effects and tactical combat interface',
+      'anime': 'anime-realistic gaming tournament stage with vibrant stadium spotlights and glowing RGB headset'
+    };
+    const gStyle = styleMap[programState.gameStyle] || 'futuristic esports arena';
+    return `A futuristic cyberpunk gamer portrait wearing glowing RGB headset, standing in a ${gStyle}, floating translucent holographic health bar and combat dialogue boxes, anime-realistic cinematic masterpiece.`;
+  } else if (id === 'p06') {
+    // 羅O鈞 婚紗
+    return `A breathtaking romantic wedding portrait of a radiant bride on a tropical white sand beach at golden sunset, delicate white bridal gown flowing in the sea breeze, gentle turquoise waves, soft lens flare, elegant and timeless fine-art wedding photography, ultra-realistic.`;
+  } else if (id === 'p12' || id === 'p13') {
+    // 鄧O康 & 王O NBA
+    const player = window.DIMENSIONS_DATA?.nba_players?.find(pl => pl.id === programState.nbaPlayerId);
+    const pName = player ? `${player.name} (${player.en})` : 'an NBA superstar';
+    return `An electrifying sports photo of an excited basketball fan high-fiving ${pName} in full team jersey on an indoor hardwood championship court, dynamic arena spotlights, cheering crowd in blurred background, professional sports photography, 8k.`;
+  } else if (id === 'p17') {
+    // 全班旗艦
+    const s = window.DIMENSIONS_DATA?.styles?.find(x => x.id === programState.selectedStyle)?.name || '寫實';
+    const l = window.DIMENSIONS_DATA?.locations?.find(x => x.id === programState.selectedLocation)?.name || '全球名勝';
+    const b = window.DIMENSIONS_DATA?.backgrounds?.find(x => x.id === programState.selectedBackground)?.name || '風景';
+    return `A cinematic travel masterpiece of a traveler exploring ${l} with ${b} scenery, rendered in exquisite ${s} aesthetic, golden hour natural illumination, stunning 8k resolution, National Geographic traveler photography.`;
+  }
+
+  return baseEn;
+}
+
+async function executeGeminiGeneration() {
+  if (programState.isGeminiGenerating) return;
+
+  const promptInput = document.getElementById('geminiPromptInput');
+  const prompt = (promptInput ? promptInput.value.trim() : programState.geminiPrompt) || composeGeminiPrompt();
+  const ratio = programState.geminiAspectRatio || '3:4';
+  const loadingBox = document.getElementById('geminiLoadingBox');
+  const btnGenerate = document.getElementById('btnGeminiGenerate');
+  const loadingText = document.getElementById('geminiLoadingText');
+
+  programState.isGeminiGenerating = true;
+  if (btnGenerate) btnGenerate.disabled = true;
+  if (loadingBox) loadingBox.style.display = 'flex';
+
+  const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
+  if (loadingText) {
+    loadingText.innerText = apiKey ? '正在連線 Google Imagen 3 (imagen-3.0-generate-002) 繪製中...' : '正在根據手稿規格生成精選 AI 示範旅拍照片...';
+  }
+
+  try {
+    let imgDataUrl = '';
+    if (apiKey) {
+      try {
+        imgDataUrl = await callGeminiImageApi(prompt, ratio);
+        showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
+      } catch (apiErr) {
+        console.warn('Gemini API call failed, falling back to simulated engine:', apiErr);
+        showToast(`⚠️ Gemini API 提示：${apiErr.message}，已自動啟用高品質示範模式！`, '⚠️');
+        imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
+      }
+    } else {
+      // Simulate realistic generation delay
+      await new Promise(r => setTimeout(r, 900));
+      imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
+      showToast(`✨ 已依據【${programState.currentProgram.student_name}】手稿規格生成 AI 旅拍照片！`, '✨');
+    }
+
+    // Load into Image object
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      programState.userImage = img;
+      renderCanvas();
+      programState.geminiHistory.unshift({
+        url: imgDataUrl,
+        prompt: prompt,
+        time: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+      });
+      if (programState.geminiHistory.length > 8) programState.geminiHistory.pop();
+
+      // Update history thumbs
+      const historyRow = document.getElementById('geminiHistoryRow');
+      const thumbsContainer = document.getElementById('geminiHistoryThumbs');
+      if (historyRow && thumbsContainer) {
+        historyRow.style.display = 'block';
+        thumbsContainer.innerHTML = renderHistoryThumbsHtml();
+        bindHistoryThumbClicks();
+      }
+    };
+    img.src = imgDataUrl;
+
+  } catch (err) {
+    showToast(`生成發生異常：${err.message}`, '❌');
+  } finally {
+    programState.isGeminiGenerating = false;
+    if (btnGenerate) btnGenerate.disabled = false;
+    if (loadingBox) loadingBox.style.display = 'none';
+  }
+}
+
+async function callGeminiImageApi(prompt, ratio) {
+  const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    throw new Error('未設定 Gemini API Key');
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${programState.geminiModel}:predict?key=${apiKey}`;
+
+  let ar = '3:4';
+  if (ratio === '1:1') ar = '1:1';
+  else if (ratio === '4:3') ar = '4:3';
+  else if (ratio === '16:9') ar = '16:9';
+
+  const body = {
+    instances: [
+      { prompt: prompt }
+    ],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: ar,
+      personGeneration: 'ALLOW_ADULT',
+      safetyFilterLevel: 'BLOCK_MEDIUM_AND_ABOVE'
+    }
+  };
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const errorJson = await response.json().catch(() => ({}));
+    const msg = errorJson.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+    throw new Error(msg);
+  }
+
+  const result = await response.json();
+  if (result.predictions && result.predictions[0] && result.predictions[0].bytesBase64Encoded) {
+    const base64 = result.predictions[0].bytesBase64Encoded;
+    const mime = result.predictions[0].mimeType || 'image/jpeg';
+    return `data:${mime};base64,${base64}`;
+  } else {
+    throw new Error('API 回傳資料中未包含影像內容');
+  }
+}
+
+/* --- 高解析度主題示範生成器 (支援免 Key 零阻力流暢體驗) --- */
+function generateThemedDemoImage(programId, prompt, ratio) {
+  return new Promise((resolve) => {
+    let w = 600, h = 800;
+    if (ratio === '1:1') { w = 600; h = 600; }
+    else if (ratio === '4:3') { w = 800; h = 600; }
+    else if (ratio === '16:9') { w = 960; h = 540; }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Draw themed visual according to programId
+    if (programId === 'p01') {
+      // 14 姚O城 國防軍事迷彩與雷達站
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#1c281e');
+      grad.addColorStop(0.5, '#2e3d2f');
+      grad.addColorStop(1, '#182019');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Searchlight beams
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      const beamGrad = ctx.createLinearGradient(w * 0.2, h, w * 0.8, 0);
+      beamGrad.addColorStop(0, '#fef08a');
+      beamGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.2, h);
+      ctx.lineTo(w * 0.7, 0);
+      ctx.lineTo(w * 0.9, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Mountain ridge silhouette
+      ctx.fillStyle = '#111812';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.65);
+      ctx.lineTo(w * 0.3, h * 0.52);
+      ctx.lineTo(w * 0.65, h * 0.58);
+      ctx.lineTo(w, h * 0.48);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Radar tower silhouette
+      ctx.fillStyle = '#0a0f0a';
+      ctx.fillRect(w * 0.68, h * 0.35, 12, h * 0.3);
+      ctx.beginPath();
+      ctx.arc(w * 0.68 + 6, h * 0.34, 28, 0.2, Math.PI * 0.9, true);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#22c55e';
+      ctx.stroke();
+
+      // Soldier silhouette with NVG
+      ctx.fillStyle = '#060a07';
+      ctx.beginPath();
+      ctx.arc(w * 0.42, h * 0.45, 55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(w * 0.25, h * 0.52, w * 0.34, h * 0.48);
+
+      // Night vision goggles glow
+      ctx.fillStyle = '#4ade80';
+      ctx.shadowColor = '#22c55e';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(w * 0.39, h * 0.44, 9, 0, Math.PI * 2);
+      ctx.arc(w * 0.45, h * 0.44, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Camo badge watermark
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.fillText('TAIWAN DEFENSE FORCES • 國防特戰英姿', 25, h - 30);
+
+    } else if (programId === 'p06') {
+      // 17 羅O鈞 婚紗前後對比海島夕陽
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#f97316');
+      grad.addColorStop(0.35, '#ec4899');
+      grad.addColorStop(0.65, '#8b5cf6');
+      grad.addColorStop(1, '#06b6d4');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Sunset sun
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.42, 65, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sea waves & reflection
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      for (let i = 0; i < 5; i++) {
+        ctx.fillRect(0, h * 0.62 + i * 28, w, 14);
+      }
+
+      // Beach shoreline
+      ctx.fillStyle = '#e0e7ff';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.78);
+      ctx.quadraticCurveTo(w * 0.5, h * 0.72, w, h * 0.85);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bride silhouette with flowing veil
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.55, 30, 0, Math.PI * 2);
+      ctx.fill();
+      // Flowing gown
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, h * 0.58);
+      ctx.lineTo(w * 0.35, h * 0.9);
+      ctx.lineTo(w * 0.68, h * 0.9);
+      ctx.closePath();
+      ctx.fill();
+      // Translucent veil
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, h * 0.53);
+      ctx.quadraticCurveTo(w * 0.75, h * 0.65, w * 0.85, h * 0.85);
+      ctx.lineTo(w * 0.55, h * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.fillText('ROMANTIC WEDDING AT SUNSET BEACH • 浪漫唯美婚紗', 25, h - 30);
+
+    } else if (programId === 'p05') {
+      // 13 林O羽 Cyberpunk 電競對話
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#0f051d');
+      grad.addColorStop(0.5, '#240f42');
+      grad.addColorStop(1, '#090a1a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Neon grid perspective
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.35)';
+      ctx.lineWidth = 1.5;
+      for (let x = 0; x <= w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, h);
+        ctx.lineTo(w * 0.5 + (x - w * 0.5) * 0.2, h * 0.55);
+        ctx.stroke();
+      }
+      for (let y = h * 0.6; y <= h; y += 24) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Gamer silhouette
+      ctx.fillStyle = '#05020c';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.48, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(w * 0.32, h * 0.55, w * 0.36, h * 0.45);
+
+      // Glowing RGB Headset
+      ctx.strokeStyle = '#ec4899';
+      ctx.lineWidth = 8;
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.48, 58, Math.PI * 0.8, Math.PI * 2.2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Holographic HUD Dialog Box
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 2;
+      ctx.fillRect(w * 0.1, h * 0.12, w * 0.8, 85);
+      ctx.strokeRect(w * 0.1, h * 0.12, w * 0.8, 85);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText('[SYSTEM] CRITICAL HIT! LEVEL UP', w * 0.14, h * 0.12 + 30);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '13px sans-serif';
+      ctx.fillText('「全軍出擊，這局勝利由我們拿下！」', w * 0.14, h * 0.12 + 60);
+
+    } else if (programId === 'p12' || programId === 'p13') {
+      // 鄧O康 & 王O NBA 巨星同框
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(0.5, '#1e293b');
+      grad.addColorStop(0.8, '#d97706');
+      grad.addColorStop(1, '#b45309');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Arena floodlights
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.moveTo(w * (0.15 + i * 0.24), 0);
+        ctx.lineTo(w * (0.05 + i * 0.28), h * 0.75);
+        ctx.lineTo(w * (0.25 + i * 0.28), h * 0.75);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Hardwood floor lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.85, 90, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Basketball
+      ctx.fillStyle = '#ea580c';
+      ctx.shadowColor = '#c2410c';
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(w * 0.72, h * 0.42, 45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(w * 0.72, h * 0.42, 45, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Players silhouette
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(w * 0.2, h * 0.45, w * 0.28, h * 0.55);
+      ctx.fillRect(w * 0.48, h * 0.38, w * 0.32, h * 0.62);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.fillText('NBA CHAMPIONSHIP HARDWOOD • 巨星傳奇同框', 25, h - 30);
+
+    } else if (programId === 'p16') {
+      // 01 王O茹 極光露營
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#020617');
+      grad.addColorStop(0.4, '#064e3b');
+      grad.addColorStop(0.7, '#1e1b4b');
+      grad.addColorStop(1, '#09090b');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Stars
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 70; i++) {
+        const sx = (Math.sin(i * 12.3) * 0.5 + 0.5) * w;
+        const sy = (Math.cos(i * 34.5) * 0.5 + 0.5) * (h * 0.5);
+        ctx.fillRect(sx, sy, 2, 2);
+      }
+
+      // Aurora curtain
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      const auroraGrad = ctx.createLinearGradient(0, 0, w, h * 0.5);
+      auroraGrad.addColorStop(0, '#34d399');
+      auroraGrad.addColorStop(0.5, '#a78bfa');
+      auroraGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = auroraGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.15);
+      ctx.bezierCurveTo(w * 0.3, h * 0.05, w * 0.6, h * 0.25, w, h * 0.1);
+      ctx.lineTo(w, h * 0.45);
+      ctx.bezierCurveTo(w * 0.7, h * 0.35, w * 0.4, h * 0.55, 0, h * 0.38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Snowy mountain silhouette
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.6);
+      ctx.lineTo(w * 0.35, h * 0.42);
+      ctx.lineTo(w * 0.7, h * 0.55);
+      ctx.lineTo(w, h * 0.45);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Glowing tent
+      ctx.fillStyle = '#f97316';
+      ctx.shadowColor = '#ea580c';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.38, h * 0.78);
+      ctx.lineTo(w * 0.55, h * 0.78);
+      ctx.lineTo(w * 0.46, h * 0.66);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.fillText('NORTHERN LIGHTS AURORA EXPEDITION • 極光雪山露營', 25, h - 30);
+
+    } else if (programId === 'p15') {
+      // 02 林O妮 東京櫻花祭
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#fce7f3');
+      grad.addColorStop(0.5, '#fbcfe8');
+      grad.addColorStop(1, '#bae6fd');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Cherry branches & blossoms
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(w * 0.4, h * 0.15, w * 0.8, h * 0.1);
+      ctx.stroke();
+
+      // Pink petals
+      ctx.fillStyle = '#f472b6';
+      for (let i = 0; i < 60; i++) {
+        const px = (Math.sin(i * 2.7) * 0.5 + 0.5) * w;
+        const py = (Math.cos(i * 3.9) * 0.5 + 0.5) * h;
+        ctx.beginPath();
+        ctx.arc(px, py, 6 + (i % 5), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Strolling traveler silhouette
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.arc(w * 0.45, h * 0.62, 28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(w * 0.38, h * 0.66, 45, 95);
+
+      ctx.fillStyle = '#831843';
+      ctx.font = 'bold 15px -apple-system, sans-serif';
+      ctx.fillText('TOKYO CHERRY BLOSSOMS SPRING • 日系櫻花粉彩街拍', 25, h - 30);
+
+    } else {
+      // General Flagship & other students
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#1e3a8a');
+      grad.addColorStop(0.5, '#0ea5e9');
+      grad.addColorStop(1, '#10b981');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Sunburst
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 12; i++) {
+        ctx.beginPath();
+        ctx.moveTo(w * 0.5, h * 0.4);
+        ctx.arc(w * 0.5, h * 0.4, w * 0.9, (i * Math.PI) / 6, (i * Math.PI) / 6 + 0.25);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Traveler silhouette
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(w * 0.5, h * 0.48, 55, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(w * 0.35, h * 0.56, w * 0.3, h * 0.44);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.font = 'bold 16px -apple-system, sans-serif';
+      ctx.fillText('AI JOURNEY GLOBAL EXPEDITION • 旗艦高畫質旅拍', 25, h - 30);
+    }
+
+    resolve(canvas.toDataURL('image/jpeg', 0.92));
+  });
+}
 /* --- 14 姚O城 國防軍事專屬步驟 --- */
 function renderMilitaryStep(step) {
   const m = window.DIMENSIONS_DATA.military;

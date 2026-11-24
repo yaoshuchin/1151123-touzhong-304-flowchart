@@ -56,7 +56,21 @@
       "格式設定",
       "特戰卡牌"
     ],
-    "image": "assets/page_01.png"
+    "image": "assets/page_01.png",
+    "gemini_prompt": {
+      "prompt_en": "A cinematic photorealistic portrait of an East Asian youth in modern military combat uniform with tactical camouflage helmet, high-tech night-vision goggles mounted, standing heroically in front of a mountain radar station with misty mountains in the background, volumetric dramatic god rays, ultra-detailed 8k, tactical realism photography.",
+      "prompt_zh": "一位英姿挺拔的青年身著現代野戰迷彩作戰服，配戴戰術鋼盔與夜視鏡，英勇佇立於高山雷達站軍事基地前，壯闊雲霧環繞，軍事大片光影，8K極致細節。",
+      "keywords": [
+        "野戰迷彩",
+        "戰術鋼盔",
+        "高山雷達站",
+        "特戰英姿",
+        "電影級打光",
+        "8K寫實"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "電影大片 (Cinematic)"
+    }
   },
   {
     "id": "p02",
@@ -115,7 +129,21 @@
       "角色造型",
       "冒險卡片"
     ],
-    "image": "assets/page_02.png"
+    "image": "assets/page_02.png",
+    "gemini_prompt": {
+      "prompt_en": "An epic adventure portrait of a young explorer in scuba diving gear swimming in crystal clear turquoise ocean, vibrant coral reef and tropical sea turtles in the background, sunbeams piercing through the water surface, National Geographic photography style, 8k resolution.",
+      "prompt_zh": "一位勇敢的探險青年配戴深海潛水裝備，遨遊於清澈湛藍的熱帶珊瑚礁海域，周圍有海龜與熱帶魚群穿梭，陽光穿透水面形成璀璨光柱，國家地理攝影風格。",
+      "keywords": [
+        "深海潛水",
+        "清澈湛藍",
+        "珊瑚礁",
+        "海龜同遊",
+        "陽光光束",
+        "極限探險"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "寫實攝影 (Realistic Photo)"
+    }
   },
   {
     "id": "p03",
@@ -174,7 +202,21 @@
       "濾鏡調節",
       "即時擷取"
     ],
-    "image": "assets/page_03.png"
+    "image": "assets/page_03.png",
+    "gemini_prompt": {
+      "prompt_en": "A high-octane portrait of a cool racecar driver in a sleek professional racing suit and helmet standing in the pit lane next to a futuristic supercar, wet asphalt reflection, racing track floodlights at dusk, cinematic action motion blur, hyperrealistic.",
+      "prompt_zh": "帥氣賽車手身著專業賽車服，佇立在國際賽車場維修區賽道上，身旁停放著流線型頂級超跑，黃昏賽道投光燈與柏油路面倒影，極速動態張力，超寫實畫質。",
+      "keywords": [
+        "極速超跑",
+        "賽道維修區",
+        "賽車服",
+        "柏油倒影",
+        "動態模糊",
+        "競技質感"
+      ],
+      "recommended_ratio": "16:9",
+      "recommended_style": "電影大片 (Cinematic)"
+    }
   },
   {
     "id": "p04",
@@ -233,7 +275,21 @@
       "拍立得",
       "賀卡生成"
     ],
-    "image": "assets/page_04.png"
+    "image": "assets/page_04.png",
+    "gemini_prompt": {
+      "prompt_en": "A heartwarming festive portrait of a smiling Taiwanese student holding a warm cup of cocoa at an illuminated Christmas night market, surrounded by glowing golden fairy lights, pine decorations, soft bokeh background, wearing a cozy knit scarf, wholesome holiday warmth, 8k.",
+      "prompt_zh": "一位面帶溫暖笑容的學生在繁華溫馨的聖誕市集裡，手捧熱可可，身穿厚實毛線圍巾，背景是金黃微醺的聖誕燈飾與松樹，迷人景深光斑，節慶溫馨氛圍。",
+      "keywords": [
+        "聖誕市集",
+        "毛線圍巾",
+        "金黃光斑",
+        "心形裁切",
+        "溫馨節慶",
+        "柔焦光暈"
+      ],
+      "recommended_ratio": "1:1",
+      "recommended_style": "柔光寫實 (Warm Realistic)"
+    }
   },
   {
     "id": "p05",
@@ -287,7 +343,21 @@
       "HUD介面",
       "封面卡牌"
     ],
-    "image": "assets/page_05.png"
+    "image": "assets/page_05.png",
+    "gemini_prompt": {
+      "prompt_en": "A futuristic cyberpunk esports gamer portrait wearing glowing RGB headset, neon purple and cyan illumination, standing in a high-tech arena with floating holographic interface windows and combat dialogue boxes, anime-realistic cinematic masterpiece.",
+      "prompt_zh": "身戴發光霓虹RGB耳麥的未來電競選手，置身於賽博龐克高科技競技場，紫藍霓虹光芒交織，半透明浮空全息介面與遊戲對白框，電影級動漫寫實大作。",
+      "keywords": [
+        "賽博龐克",
+        "RGB耳麥",
+        "全息對白",
+        "霓虹光影",
+        "電競舞台",
+        "未來科技"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "動漫寫實 (Anime-Realistic)"
+    }
   },
   {
     "id": "p06",
@@ -341,7 +411,21 @@
       "前後對比",
       "對比滑桿"
     ],
-    "image": "assets/page_06.png"
+    "image": "assets/page_06.png",
+    "gemini_prompt": {
+      "prompt_en": "A breathtaking romantic wedding portrait of a radiant bride on a private tropical beach at golden sunset, delicate white bridal gown flowing in the sea breeze, gentle turquoise waves, soft lens flare, elegant and timeless fine-art wedding photography, ultra-realistic.",
+      "prompt_zh": "在夕陽餘暉灑落的熱帶白沙灘上，新娘身著輕盈飄逸的純白刺繡婚紗，海風微拂，海浪輕拍金黃沙灘，典雅雋永的頂級藝術婚紗寫真，超高解析柔光。",
+      "keywords": [
+        "海島婚紗",
+        "白沙夕陽",
+        "飄逸白紗",
+        "逆光金芒",
+        "前後對比",
+        "法式浪漫"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "藝術寫真 (Fine Art)"
+    }
   },
   {
     "id": "p07",
@@ -405,7 +489,21 @@
       "完整工序",
       "照片生成"
     ],
-    "image": "assets/page_07.png"
+    "image": "assets/page_07.png",
+    "gemini_prompt": {
+      "prompt_en": "A thrilling adventure photo of a young archeologist in khaki expedition outfit holding an antique brass compass, standing in front of a majestic ancient Mayan jungle pyramid, tropical lush foliage, golden sunbeams piercing ancient ruins, Indiana Jones aesthetic.",
+      "prompt_zh": "身穿卡其色探險服裝的年輕考古學家，手持復古黃銅羅盤，探索被熱帶雨林包圍的壯麗瑪雅金字塔神廟，晨光穿透古老巨石，印第安納瓊斯探險風格。",
+      "keywords": [
+        "古文明金字塔",
+        "叢林遺跡",
+        "復古羅盤",
+        "考古探險",
+        "七步探索",
+        "黃金光線"
+      ],
+      "recommended_ratio": "4:3",
+      "recommended_style": "冒險大片 (Adventure Cinematic)"
+    }
   },
   {
     "id": "p08",
@@ -466,7 +564,21 @@
       "8-15字標語",
       "下載分享"
     ],
-    "image": "assets/page_08.png"
+    "image": "assets/page_08.png",
+    "gemini_prompt": {
+      "prompt_en": "An inspiring superhero portrait of a young hero standing on a skyscraper rooftop overlooking the futuristic Tokyo cityscape at twilight, dramatic sunset sky, gentle wind fluttering a sleek cape, epic cinematic movie still, 8k.",
+      "prompt_zh": "身披俐落戰袍的年輕超級英雄佇立在摩天大樓頂層，俯瞰黃昏時分的現代未來都會天際線，夕陽雲彩漫天，史詩級漫威電影劇照質感，8K畫質。",
+      "keywords": [
+        "摩天大樓",
+        "英雄天際線",
+        "暮光之城",
+        "未來都市",
+        "電影劇照",
+        "史詩壯闊"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "電影大片 (Cinematic)"
+    }
   },
   {
     "id": "p09",
@@ -526,7 +638,21 @@
       "5情境",
       "6背景"
     ],
-    "image": "assets/page_09.png"
+    "image": "assets/page_09.png",
+    "gemini_prompt": {
+      "prompt_en": "A dignified portrait of an Asian youth dressed in elegant classical attire, strolling through the magnificent gardens of a French Renaissance palace, marble fountains and manicured hedges, soft morning daylight, royal artistic oil-painting photographic blend.",
+      "prompt_zh": "著典雅宮廷休閒服裝的青年漫步於文藝復興宮殿花園中，身旁是宏偉的大理石噴泉與修剪整齊的皇家樹籬，柔和晨光灑落，古典貴族藝術氛圍。",
+      "keywords": [
+        "文藝復興",
+        "宮廷花園",
+        "大理石噴泉",
+        "古典優雅",
+        "晨曦柔光",
+        "藝術寫真"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "古典油畫風 (Classical Oil)"
+    }
   },
   {
     "id": "p10",
@@ -585,7 +711,21 @@
       "六國版圖",
       "照片下載"
     ],
-    "image": "assets/page_10.png"
+    "image": "assets/page_10.png",
+    "gemini_prompt": {
+      "prompt_en": "An adorable heartwarming portrait of a cheerful high-school student cuddling a fluffy Shiba Inu puppy and a calico cat in a sun-drenched Scandinavian pet cafe, potted plants and wooden textures, warm golden daylight, joyful candid photography.",
+      "prompt_zh": "元氣滿滿的學生在陽光灑落的北歐風萌寵咖啡廳裡，溫柔懷抱著蓬鬆柴犬與可愛三花貓，木質調裝潢與綠意盆栽，充滿療癒感的自然抓拍寫真。",
+      "keywords": [
+        "萌寵柴犬",
+        "療癒貓咪",
+        "溫暖木質",
+        "陽光咖啡廳",
+        "生活抓拍",
+        "甜蜜笑容"
+      ],
+      "recommended_ratio": "1:1",
+      "recommended_style": "清新日系 (Japanese Fresh)"
+    }
   },
   {
     "id": "p11",
@@ -645,7 +785,21 @@
       "8-15字標語",
       "一鍵下載"
     ],
-    "image": "assets/page_11.png"
+    "image": "assets/page_11.png",
+    "gemini_prompt": {
+      "prompt_en": "A stylish young traveler sitting at a classic sidewalk cafe on the Left Bank in Paris, sipping an espresso with croissants, the Eiffel Tower gracefully visible across the Seine River in autumn, fallen golden leaves, chic film aesthetic.",
+      "prompt_zh": "時尚旅人坐在巴黎塞納河左岸的露天咖啡座，桌上擺放著濃縮咖啡與現烤可頌，遠方艾菲爾鐵塔倒映秋日河畔，金黃落葉紛飛，法式愜意底片風。",
+      "keywords": [
+        "巴黎左岸",
+        "露天咖啡",
+        "艾菲爾鐵塔",
+        "秋日金黃",
+        "底片復古",
+        "優雅慢活"
+      ],
+      "recommended_ratio": "4:3",
+      "recommended_style": "復古膠卷 (Vintage Film)"
+    }
   },
   {
     "id": "p12",
@@ -706,7 +860,21 @@
       "籃球主題",
       "合照卡片"
     ],
-    "image": "assets/page_12.png"
+    "image": "assets/page_12.png",
+    "gemini_prompt": {
+      "prompt_en": "An electrifying sports photo of an ecstatic basketball fan high-fiving an NBA superstar in full team jersey on an indoor hardwood championship court, dynamic arena spotlights, cheering crowd in blurred background, professional sports photography, 8k.",
+      "prompt_zh": "興奮的熱血球迷在NBA冠軍球場邊，與身穿球衣的籃球巨星擊掌慶祝，耀眼的體育館投光燈，背景虛化歡呼的滿場觀眾，專業體育新聞攝影水準。",
+      "keywords": [
+        "NBA巨星",
+        "球場同框",
+        "體育館聚光燈",
+        "擊掌同慶",
+        "動態抓拍",
+        "籃球熱血"
+      ],
+      "recommended_ratio": "4:3",
+      "recommended_style": "體育紀實 (Sports Action)"
+    }
   },
   {
     "id": "p13",
@@ -765,7 +933,21 @@
       "新生代巨星",
       "球卡生成"
     ],
-    "image": "assets/page_13.png"
+    "image": "assets/page_13.png",
+    "gemini_prompt": {
+      "prompt_en": "A dramatic courtside photograph of a young baller standing side-by-side with legendary NBA Hall of Fame basketball superstars, championship trophy shimmering nearby, dramatic arena rim lighting, sports illustrated cover style.",
+      "prompt_zh": "青年球員與傳奇名人堂巨星並肩站在聚光燈下的籃球殿堂，金黃奧布萊恩冠軍金盃熠熠生輝，強烈側光勾勒運動員肌肉線條，運動畫刊封面質感。",
+      "keywords": [
+        "名人堂巨星",
+        "冠軍金盃",
+        "球場聚光燈",
+        "運動畫刊",
+        "同框合影",
+        "傳奇時刻"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "封面海報 (Cover Poster)"
+    }
   },
   {
     "id": "p14",
@@ -824,7 +1006,21 @@
       "10種風格",
       "自由組合"
     ],
-    "image": "assets/page_14.png"
+    "image": "assets/page_14.png",
+    "gemini_prompt": {
+      "prompt_en": "A magical portrait of a delighted visitor wearing Mickey ears standing before a majestic fairy tale castle at night, dazzling fireworks bursting across the star-filled purple sky, fairy sparkles, vibrant Disney aesthetic, hyper-detailed.",
+      "prompt_zh": "開心的遊客頭戴米奇耳朵頭箍，佇立在夜晚宏偉絢麗的童話城堡前，夜空綻放五彩斑斕的夢幻煙火，點點星光與魔幻光暈，迪士尼經典奇幻美學。",
+      "keywords": [
+        "童話城堡",
+        "璀璨煙火",
+        "迪士尼美學",
+        "魔法光點",
+        "夜空星光",
+        "快樂遊歷"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "童話奇幻 (Fairy Tale)"
+    }
   },
   {
     "id": "p15",
@@ -878,7 +1074,21 @@
       "SloganGenerator",
       "風格濾鏡引擎"
     ],
-    "image": "assets/page_15.png"
+    "image": "assets/page_15.png",
+    "gemini_prompt": {
+      "prompt_en": "A serene aesthetic portrait of a young person in light spring trench coat walking along Meguro River lined with blooming pink cherry blossom trees in Tokyo, pink flower petals gently falling in the gentle breeze, soft pastel morning lighting.",
+      "prompt_zh": "身穿淺色春季風衣的青年漫步於東京目黑川畔，兩岸粉嫩櫻花盛開如雲，微風輕拂落櫻繽紛，柔和粉彩春日晨光，日系清新空氣感寫真。",
+      "keywords": [
+        "櫻花盛開",
+        "目黑川畔",
+        "日系清新",
+        "粉彩光影",
+        "落櫻紛飛",
+        "春季旅拍"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "日系清新 (Japanese Fresh)"
+    }
   },
   {
     "id": "p16",
@@ -932,7 +1142,21 @@
       "AI智能標語",
       "影像重塑"
     ],
-    "image": "assets/page_16.png"
+    "image": "assets/page_16.png",
+    "gemini_prompt": {
+      "prompt_en": "A magical travel photograph of a traveler standing beside an illuminated orange camping tent under the vibrant green and purple Aurora Borealis northern lights, snow-capped mountains reflecting starry skies, breathtaking nature, long exposure style.",
+      "prompt_zh": "旅人佇立在雪山腳下發光的橘色露營帳篷旁，頭頂上方是漫天翻騰的翠綠與紫紅極光，滿天繁星璀璨銀河，令人屏息的極地奇景長曝光寫真。",
+      "keywords": [
+        "極光漫天",
+        "雪山露營",
+        "繁星銀河",
+        "發光帳篷",
+        "極地冒險",
+        "長曝光美景"
+      ],
+      "recommended_ratio": "16:9",
+      "recommended_style": "長曝星空 (Astrophotography)"
+    }
   },
   {
     "id": "p17",
@@ -993,6 +1217,20 @@
       "8-15字文案",
       "一鍵下載"
     ],
-    "image": "assets/page_17.png"
+    "image": "assets/page_17.png",
+    "gemini_prompt": {
+      "prompt_en": "A breathtaking cinematic travel masterpiece of a confident young globetrotter standing on an scenic overlook above Machu Picchu at sunrise, golden dawn mist weaving through lush green Andes peaks, photorealistic 8k, National Geographic traveler style.",
+      "prompt_zh": "自信的年輕旅人佇立於晨曦中的馬丘比丘高地觀景台，金黃朝陽雲霧穿梭於翠綠的安地斯山脈高峰之間，國家地理旅人封面質感，8K超高解析度。",
+      "keywords": [
+        "世界遺產",
+        "馬丘比丘",
+        "晨曦金霧",
+        "全球旅程",
+        "國家地理",
+        "8K旗艦"
+      ],
+      "recommended_ratio": "3:4",
+      "recommended_style": "國家地理 (National Geographic)"
+    }
   }
 ]
