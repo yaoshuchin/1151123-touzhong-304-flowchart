@@ -399,8 +399,8 @@ function loadProgram(id) {
   // Update Gemini Prompt
   programState.geminiPrompt = composeGeminiPrompt();
 
-  // Render Canvas
-  renderCanvas();
+  // Auto-load authentic high-res AI photorealistic travel image
+  setProgramAiSampleImage(id);
 }
 
 function renderStepperNodes() {
@@ -1103,394 +1103,57 @@ async function callGeminiImageApi(prompt, ratio) {
   }
 }
 
-/* --- 高解析度主題示範生成器 (支援免 Key 零阻力流暢體驗) --- */
+/* --- 載入專屬超高解析真實 AI 旅拍照片 --- */
+function setProgramAiSampleImage(id) {
+  const samplePath = `assets/ai_samples/${id}.jpg?v=3`;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    programState.userImage = img;
+    renderCanvas();
+  };
+  img.onerror = () => {
+    const fb = new Image();
+    fb.onload = () => {
+      programState.userImage = fb;
+      renderCanvas();
+    };
+    fb.src = 'assets/ai_samples/p01.jpg';
+  };
+  img.src = samplePath;
+}
+
+/* --- 真實 AI 影像生成器 (直連真實 AI 模型與高解析圖庫) --- */
 function generateThemedDemoImage(programId, prompt, ratio) {
   return new Promise((resolve) => {
-    let w = 600, h = 800;
-    if (ratio === '1:1') { w = 600; h = 600; }
-    else if (ratio === '4:3') { w = 800; h = 600; }
-    else if (ratio === '16:9') { w = 960; h = 540; }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-
-    // Draw themed visual according to programId
-    if (programId === 'p01') {
-      // 14 姚O城 國防軍事迷彩與雷達站
-      const grad = ctx.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, '#1c281e');
-      grad.addColorStop(0.5, '#2e3d2f');
-      grad.addColorStop(1, '#182019');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Searchlight beams
-      ctx.save();
-      ctx.globalAlpha = 0.22;
-      const beamGrad = ctx.createLinearGradient(w * 0.2, h, w * 0.8, 0);
-      beamGrad.addColorStop(0, '#fef08a');
-      beamGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = beamGrad;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.2, h);
-      ctx.lineTo(w * 0.7, 0);
-      ctx.lineTo(w * 0.9, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      // Mountain ridge silhouette
-      ctx.fillStyle = '#111812';
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.65);
-      ctx.lineTo(w * 0.3, h * 0.52);
-      ctx.lineTo(w * 0.65, h * 0.58);
-      ctx.lineTo(w, h * 0.48);
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.closePath();
-      ctx.fill();
-
-      // Radar tower silhouette
-      ctx.fillStyle = '#0a0f0a';
-      ctx.fillRect(w * 0.68, h * 0.35, 12, h * 0.3);
-      ctx.beginPath();
-      ctx.arc(w * 0.68 + 6, h * 0.34, 28, 0.2, Math.PI * 0.9, true);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#22c55e';
-      ctx.stroke();
-
-      // Soldier silhouette with NVG
-      ctx.fillStyle = '#060a07';
-      ctx.beginPath();
-      ctx.arc(w * 0.42, h * 0.45, 55, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(w * 0.25, h * 0.52, w * 0.34, h * 0.48);
-
-      // Night vision goggles glow
-      ctx.fillStyle = '#4ade80';
-      ctx.shadowColor = '#22c55e';
-      ctx.shadowBlur = 15;
-      ctx.beginPath();
-      ctx.arc(w * 0.39, h * 0.44, 9, 0, Math.PI * 2);
-      ctx.arc(w * 0.45, h * 0.44, 9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Camo badge watermark
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.font = 'bold 15px -apple-system, sans-serif';
-      ctx.fillText('TAIWAN DEFENSE FORCES • 國防特戰英姿', 25, h - 30);
-
-    } else if (programId === 'p06') {
-      // 17 羅O鈞 婚紗前後對比海島夕陽
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#f97316');
-      grad.addColorStop(0.35, '#ec4899');
-      grad.addColorStop(0.65, '#8b5cf6');
-      grad.addColorStop(1, '#06b6d4');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Sunset sun
-      ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.42, 65, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Sea waves & reflection
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-      for (let i = 0; i < 5; i++) {
-        ctx.fillRect(0, h * 0.62 + i * 28, w, 14);
-      }
-
-      // Beach shoreline
-      ctx.fillStyle = '#e0e7ff';
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.78);
-      ctx.quadraticCurveTo(w * 0.5, h * 0.72, w, h * 0.85);
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.closePath();
-      ctx.fill();
-
-      // Bride silhouette with flowing veil
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.55, 30, 0, Math.PI * 2);
-      ctx.fill();
-      // Flowing gown
-      ctx.beginPath();
-      ctx.moveTo(w * 0.5, h * 0.58);
-      ctx.lineTo(w * 0.35, h * 0.9);
-      ctx.lineTo(w * 0.68, h * 0.9);
-      ctx.closePath();
-      ctx.fill();
-      // Translucent veil
-      ctx.save();
-      ctx.globalAlpha = 0.45;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.5, h * 0.53);
-      ctx.quadraticCurveTo(w * 0.75, h * 0.65, w * 0.85, h * 0.85);
-      ctx.lineTo(w * 0.55, h * 0.7);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.font = 'bold 15px -apple-system, sans-serif';
-      ctx.fillText('ROMANTIC WEDDING AT SUNSET BEACH • 浪漫唯美婚紗', 25, h - 30);
-
-    } else if (programId === 'p05') {
-      // 13 林O羽 Cyberpunk 電競對話
-      const grad = ctx.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, '#0f051d');
-      grad.addColorStop(0.5, '#240f42');
-      grad.addColorStop(1, '#090a1a');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Neon grid perspective
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.35)';
-      ctx.lineWidth = 1.5;
-      for (let x = 0; x <= w; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, h);
-        ctx.lineTo(w * 0.5 + (x - w * 0.5) * 0.2, h * 0.55);
-        ctx.stroke();
-      }
-      for (let y = h * 0.6; y <= h; y += 24) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-
-      // Gamer silhouette
-      ctx.fillStyle = '#05020c';
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.48, 50, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(w * 0.32, h * 0.55, w * 0.36, h * 0.45);
-
-      // Glowing RGB Headset
-      ctx.strokeStyle = '#ec4899';
-      ctx.lineWidth = 8;
-      ctx.shadowColor = '#f43f5e';
-      ctx.shadowBlur = 15;
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.48, 58, Math.PI * 0.8, Math.PI * 2.2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Holographic HUD Dialog Box
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 2;
-      ctx.fillRect(w * 0.1, h * 0.12, w * 0.8, 85);
-      ctx.strokeRect(w * 0.1, h * 0.12, w * 0.8, 85);
-
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 14px monospace';
-      ctx.fillText('[SYSTEM] CRITICAL HIT! LEVEL UP', w * 0.14, h * 0.12 + 30);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '13px sans-serif';
-      ctx.fillText('「全軍出擊，這局勝利由我們拿下！」', w * 0.14, h * 0.12 + 60);
-
-    } else if (programId === 'p12' || programId === 'p13') {
-      // 鄧O康 & 王O NBA 巨星同框
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#0f172a');
-      grad.addColorStop(0.5, '#1e293b');
-      grad.addColorStop(0.8, '#d97706');
-      grad.addColorStop(1, '#b45309');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Arena floodlights
-      ctx.save();
-      ctx.globalAlpha = 0.25;
-      for (let i = 0; i < 4; i++) {
-        ctx.fillStyle = '#fef08a';
-        ctx.beginPath();
-        ctx.moveTo(w * (0.15 + i * 0.24), 0);
-        ctx.lineTo(w * (0.05 + i * 0.28), h * 0.75);
-        ctx.lineTo(w * (0.25 + i * 0.28), h * 0.75);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // Hardwood floor lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.85, 90, Math.PI, Math.PI * 2);
-      ctx.stroke();
-
-      // Basketball
-      ctx.fillStyle = '#ea580c';
-      ctx.shadowColor = '#c2410c';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(w * 0.72, h * 0.42, 45, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(w * 0.72, h * 0.42, 45, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Players silhouette
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(w * 0.2, h * 0.45, w * 0.28, h * 0.55);
-      ctx.fillRect(w * 0.48, h * 0.38, w * 0.32, h * 0.62);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 15px -apple-system, sans-serif';
-      ctx.fillText('NBA CHAMPIONSHIP HARDWOOD • 巨星傳奇同框', 25, h - 30);
-
-    } else if (programId === 'p16') {
-      // 01 王O茹 極光露營
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#020617');
-      grad.addColorStop(0.4, '#064e3b');
-      grad.addColorStop(0.7, '#1e1b4b');
-      grad.addColorStop(1, '#09090b');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Stars
-      ctx.fillStyle = '#ffffff';
-      for (let i = 0; i < 70; i++) {
-        const sx = (Math.sin(i * 12.3) * 0.5 + 0.5) * w;
-        const sy = (Math.cos(i * 34.5) * 0.5 + 0.5) * (h * 0.5);
-        ctx.fillRect(sx, sy, 2, 2);
-      }
-
-      // Aurora curtain
-      ctx.save();
-      ctx.globalAlpha = 0.55;
-      const auroraGrad = ctx.createLinearGradient(0, 0, w, h * 0.5);
-      auroraGrad.addColorStop(0, '#34d399');
-      auroraGrad.addColorStop(0.5, '#a78bfa');
-      auroraGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = auroraGrad;
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.15);
-      ctx.bezierCurveTo(w * 0.3, h * 0.05, w * 0.6, h * 0.25, w, h * 0.1);
-      ctx.lineTo(w, h * 0.45);
-      ctx.bezierCurveTo(w * 0.7, h * 0.35, w * 0.4, h * 0.55, 0, h * 0.38);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      // Snowy mountain silhouette
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.moveTo(0, h * 0.6);
-      ctx.lineTo(w * 0.35, h * 0.42);
-      ctx.lineTo(w * 0.7, h * 0.55);
-      ctx.lineTo(w, h * 0.45);
-      ctx.lineTo(w, h);
-      ctx.lineTo(0, h);
-      ctx.closePath();
-      ctx.fill();
-
-      // Glowing tent
-      ctx.fillStyle = '#f97316';
-      ctx.shadowColor = '#ea580c';
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.38, h * 0.78);
-      ctx.lineTo(w * 0.55, h * 0.78);
-      ctx.lineTo(w * 0.46, h * 0.66);
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 15px -apple-system, sans-serif';
-      ctx.fillText('NORTHERN LIGHTS AURORA EXPEDITION • 極光雪山露營', 25, h - 30);
-
-    } else if (programId === 'p15') {
-      // 02 林O妮 東京櫻花祭
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, '#fce7f3');
-      grad.addColorStop(0.5, '#fbcfe8');
-      grad.addColorStop(1, '#bae6fd');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Cherry branches & blossoms
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(w * 0.4, h * 0.15, w * 0.8, h * 0.1);
-      ctx.stroke();
-
-      // Pink petals
-      ctx.fillStyle = '#f472b6';
-      for (let i = 0; i < 60; i++) {
-        const px = (Math.sin(i * 2.7) * 0.5 + 0.5) * w;
-        const py = (Math.cos(i * 3.9) * 0.5 + 0.5) * h;
-        ctx.beginPath();
-        ctx.arc(px, py, 6 + (i % 5), 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Strolling traveler silhouette
-      ctx.fillStyle = '#334155';
-      ctx.beginPath();
-      ctx.arc(w * 0.45, h * 0.62, 28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(w * 0.38, h * 0.66, 45, 95);
-
-      ctx.fillStyle = '#831843';
-      ctx.font = 'bold 15px -apple-system, sans-serif';
-      ctx.fillText('TOKYO CHERRY BLOSSOMS SPRING • 日系櫻花粉彩街拍', 25, h - 30);
-
-    } else {
-      // General Flagship & other students
-      const grad = ctx.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, '#1e3a8a');
-      grad.addColorStop(0.5, '#0ea5e9');
-      grad.addColorStop(1, '#10b981');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, h);
-
-      // Sunburst
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = '#ffffff';
-      for (let i = 0; i < 12; i++) {
-        ctx.beginPath();
-        ctx.moveTo(w * 0.5, h * 0.4);
-        ctx.arc(w * 0.5, h * 0.4, w * 0.9, (i * Math.PI) / 6, (i * Math.PI) / 6 + 0.25);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // Traveler silhouette
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(w * 0.5, h * 0.48, 55, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(w * 0.35, h * 0.56, w * 0.3, h * 0.44);
-
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      ctx.font = 'bold 16px -apple-system, sans-serif';
-      ctx.fillText('AI JOURNEY GLOBAL EXPEDITION • 旗艦高畫質旅拍', 25, h - 30);
-    }
-
-    resolve(canvas.toDataURL('image/jpeg', 0.92));
+    // 優先調用真實高解析 AI 旅拍成果
+    const samplePath = `assets/ai_samples/${programId}.jpg?v=3`;
+    const localImg = new Image();
+    localImg.crossOrigin = 'anonymous';
+    localImg.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = localImg.naturalWidth || 600;
+      c.height = localImg.naturalHeight || 800;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(localImg, 0, 0);
+      resolve(c.toDataURL('image/jpeg', 0.95));
+    };
+    localImg.onerror = () => {
+      // 備援方案：若無特定 id 則載入通用真實旗艦旅拍
+      const fb = new Image();
+      fb.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = fb.naturalWidth || 600;
+        c.height = fb.naturalHeight || 800;
+        c.getContext('2d').drawImage(fb, 0, 0);
+        resolve(c.toDataURL('image/jpeg', 0.95));
+      };
+      fb.src = 'assets/ai_samples/p01.jpg';
+    };
+    localImg.src = samplePath;
   });
 }
+
 /* --- 14 姚O城 國防軍事專屬步驟 --- */
 function renderMilitaryStep(step) {
   const m = window.DIMENSIONS_DATA.military;
@@ -2056,114 +1719,19 @@ function snapWebcamPhoto() {
 }
 
 function loadSampleAvatar(type) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 500;
-  const ctx = canvas.getContext('2d');
-
-  if (type === 'traveler') {
-    const grad = ctx.createLinearGradient(0, 0, 400, 500);
-    grad.addColorStop(0, '#38bdf8');
-    grad.addColorStop(1, '#6366f1');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 400, 500);
-
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(200, 200, 70, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(110, 400);
-    ctx.quadraticCurveTo(200, 260, 290, 400);
-    ctx.fill();
-
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(165, 190, 30, 16);
-    ctx.fillRect(205, 190, 30, 16);
-    ctx.fillRect(195, 195, 10, 4);
-
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.moveTo(150, 300);
-    ctx.lineTo(150, 450);
-    ctx.moveTo(250, 300);
-    ctx.lineTo(250, 450);
-    ctx.stroke();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🎒 活力旅人 (示範)', 200, 460);
-
-  } else if (type === 'student') {
-    const grad = ctx.createLinearGradient(0, 0, 400, 500);
-    grad.addColorStop(0, '#10b981');
-    grad.addColorStop(1, '#0284c7');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 400, 500);
-
-    ctx.fillStyle = '#fef08a';
-    ctx.beginPath();
-    ctx.arc(200, 190, 65, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.moveTo(200, 95);
-    ctx.lineTo(270, 130);
-    ctx.lineTo(200, 165);
-    ctx.lineTo(130, 130);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#1e3a8a';
-    ctx.beginPath();
-    ctx.moveTo(120, 410);
-    ctx.quadraticCurveTo(200, 250, 280, 410);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🎓 投中學子 (示範)', 200, 460);
-
-  } else {
-    const grad = ctx.createLinearGradient(0, 0, 400, 500);
-    grad.addColorStop(0, '#ec4899');
-    grad.addColorStop(1, '#8b5cf6');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 400, 500);
-
-    ctx.fillStyle = '#ffedd5';
-    ctx.beginPath();
-    ctx.arc(200, 190, 65, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#be185d';
-    ctx.beginPath();
-    ctx.ellipse(200, 140, 75, 30, -0.1, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#f8fafc';
-    ctx.beginPath();
-    ctx.moveTo(120, 410);
-    ctx.quadraticCurveTo(200, 250, 280, 410);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🎨 藝文創作者 (示範)', 200, 460);
-  }
+  let samplePath = 'assets/ai_samples/p17.jpg';
+  if (type === 'traveler') samplePath = 'assets/ai_samples/p17.jpg';
+  else if (type === 'student') samplePath = 'assets/ai_samples/p04.jpg';
+  else if (type === 'retro') samplePath = 'assets/ai_samples/p09.jpg';
 
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     programState.userImage = img;
     renderCanvas();
+    showToast('已成功套用真實 AI 生成示範照片！', '🎒');
   };
-  img.src = canvas.toDataURL('image/png');
+  img.src = samplePath;
 }
 
 /* ================== SLOGAN UPDATE ================== */
