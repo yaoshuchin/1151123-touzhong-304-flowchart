@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>南投國中 304 班｜AI旅程照片生成器 & 流程圖規格庫</title>
-  <link rel="stylesheet" href="style.css?v=20261124_06">
+  <link rel="stylesheet" href="style.css?v=20261124_07">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
 </head>
 <body>
@@ -153,7 +153,12 @@
         <!-- 右側：即時 Canvas 渲染預覽與下載面板 -->
         <aside class="studio-sidebar">
           <div class="preview-card">
-            <h4><span id="canvasIcon">🖼️</span> <span id="canvasPreviewTitle">即時生成海報預覽</span></h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.25rem;">
+              <h4 style="margin: 0;"><span id="canvasIcon">🖼️</span> <span id="canvasPreviewTitle">即時生成海報預覽</span></h4>
+              <button type="button" id="btnQuickChangePhoto" onclick="goToStep(1); setTimeout(() => { const fi = document.getElementById('unifiedFileInput'); if(fi){ fi.value=''; fi.click(); } }, 50);" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 600; color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer;">
+                📁 更換照片
+              </button>
+            </div>
             
             <div class="canvas-wrapper">
               <canvas id="posterCanvas" width="600" height="800"></canvas>
@@ -363,7 +368,7 @@
   </div>
 
   <!-- 載入資料庫 bundle 與應用程式邏輯 -->
-  <script src="assets/flowcharts_bundle.js?v=20261124_06"></script>
-  <script src="app.js?v=20261124_06"></script>
+  <script src="assets/flowcharts_bundle.js?v=20261124_07"></script>
+  <script src="app.js?v=20261124_07"></script>
 </body>
 </html>

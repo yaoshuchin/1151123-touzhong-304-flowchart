@@ -558,9 +558,12 @@ function bindHistoryThumbClicks() {
 /* --- STEP 1: 照片輸入與相機 (直接上傳照片作為主角，不在此提前生圖) --- */
 function renderStep1PhotoInput() {
   const p = programState.currentProgram || {};
-  const hasUpload = !!programState.rawUploadedImage;
-  const currentPhotoSrc = programState.userImage ? programState.userImage.src : `assets/ai_samples/${programState.currentProgramId}.jpg`;
+  const hasUserPhoto = !!(programState.isUserPhoto && programState.rawUploadedImage);
+  const currentPhotoSrc = hasUserPhoto 
+    ? programState.rawUploadedImage.src 
+    : (programState.rawUploadedImage ? programState.rawUploadedImage.src : (programState.userImage ? programState.userImage.src : `assets/ai_samples/${programState.currentProgramId}.jpg`));
   const totalSteps = p.steps ? p.steps.length : programState.totalSteps;
+  const photoName = programState.photoFileName || (hasUserPhoto ? '自訂相片' : '');
 
   return `
     <div class="step1-unified-container">
@@ -574,14 +577,16 @@ function renderStep1PhotoInput() {
 
         <div class="upload-drop-row">
           <!-- 點擊或拖曳上傳框 -->
-          <div class="drop-zone-mini" id="unifiedDropZone">
+          <div class="drop-zone-mini" id="unifiedDropZone" title="點擊選擇照片或拖曳檔案至此">
             <div class="drop-zone-icon">📁</div>
             <div class="drop-zone-text">
               <strong>點擊選擇照片</strong> 或直接將檔案拖曳至此處
               <div style="font-size: 0.75rem; color: #94a3b8;">支援 JPG、PNG、WEBP 等人像照片</div>
             </div>
-            <input type="file" id="unifiedFileInput" accept="image/*" style="display: none;">
           </div>
+
+          <!-- 隱藏原生檔案選擇器 (獨立放置於 dropZone 外，避免事件冒泡衝突) -->
+          <input type="file" id="unifiedFileInput" accept="image/*" style="display: none;">
 
           <!-- 相機快速拍照按鈕 -->
           <button type="button" class="btn-webcam-quick" id="btnUnifiedWebcam">
@@ -599,17 +604,17 @@ function renderStep1PhotoInput() {
           </div>
         </div>
 
-        <!-- 當前照片狀態預覽列 -->
+        <!-- 當前照片狀態預覽列 (支援點擊縮圖或按鈕直接更換相片) -->
         <div class="uploaded-photo-preview-bar" id="uploadedPhotoBar">
-          <div class="uploaded-thumb-box">
+          <div class="uploaded-thumb-box" id="uploadedThumbBox" title="點擊直接更換相片">
             <img id="uploadedThumbImg" src="${currentPhotoSrc}" alt="當前照片預覽">
           </div>
           <div class="uploaded-info-box">
             <div class="uploaded-status-badge" id="uploadedStatusBadge">
-              ${hasUpload ? '✅ 個人照片已就緒' : '🎨 系統精選示範照片已就緒'}
+              ${hasUserPhoto ? `✅ 您的專屬相片已就緒 (${escapeHtml(photoName)})` : (programState.rawUploadedImage ? `🎨 範例人物照 (${escapeHtml(photoName || '示範照')})` : '🎨 系統精選示範照片已就緒')}
             </div>
             <div class="uploaded-hint-text" id="uploadedHintText">
-              ${hasUpload ? '已成功載入您的個人照片！請點選下方「下一步 →」依序挑選風格與參數。' : '您可點擊上方選取自己的照片，或點選下方範例人物快速體驗！'}
+              ${hasUserPhoto ? `已成功載入您的相片【${escapeHtml(photoName)}】！可點選「📁 更換相片」重新選取，或點選下方「下一步 →」依序挑選風格與參數。` : '您可點擊上方選取自己的照片，或點選下方範例人物快速體驗！'}
             </div>
           </div>
           <div class="uploaded-actions">
@@ -653,35 +658,82 @@ function bindStep1Events() {
   const btnWebcam = document.getElementById('btnUnifiedWebcam');
   const webcamContainer = document.getElementById('unifiedWebcamContainer');
   const btnTriggerUpload = document.getElementById('btnTriggerUpload');
+  const thumbBox = document.getElementById('uploadedThumbBox');
+  const thumbImg = document.getElementById('uploadedThumbImg');
+  const photoBar = document.getElementById('uploadedPhotoBar');
 
-  // Trigger file upload on click
-  if (dropZone && fileInput) {
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleImageFile(file);
-    });
+  // 通用開啟相片選擇對話框 (每次開啟前先清空 value，保證重複選擇同檔名亦能觸發 change)
+  function triggerOpenFile(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (fileInput) {
+      fileInput.value = '';
+      fileInput.click();
+    }
+  }
 
-    dropZone.addEventListener('dragover', (e) => {
+  // 檔案選取監聽器
+  if (fileInput) {
+    fileInput.onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        handleImageFile(file);
+      }
+      fileInput.value = '';
+    };
+  }
+
+  // 點擊上傳拖曳框觸發選擇
+  if (dropZone) {
+    dropZone.onclick = triggerOpenFile;
+    dropZone.ondragover = (e) => {
       e.preventDefault();
       dropZone.classList.add('dragover');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', (e) => {
+    };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    dropZone.ondrop = (e) => {
       e.preventDefault();
       dropZone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
       if (file) handleImageFile(file);
-    });
+    };
   }
 
-  if (btnTriggerUpload && fileInput) {
-    btnTriggerUpload.addEventListener('click', () => fileInput.click());
+  // 「更換相片」按鈕
+  if (btnTriggerUpload) {
+    btnTriggerUpload.onclick = triggerOpenFile;
   }
 
-  // Webcam Quick Toggle
+  // 點選左側縮圖框亦可直接更換相片
+  if (thumbBox) {
+    thumbBox.onclick = triggerOpenFile;
+  }
+  if (thumbImg) {
+    thumbImg.onclick = triggerOpenFile;
+  }
+
+  // 整條預覽列支援拖曳更換
+  if (photoBar) {
+    photoBar.ondragover = (e) => {
+      e.preventDefault();
+      photoBar.style.borderColor = '#7c3aed';
+    };
+    photoBar.ondragleave = () => {
+      photoBar.style.borderColor = '#e2e8f0';
+    };
+    photoBar.ondrop = (e) => {
+      e.preventDefault();
+      photoBar.style.borderColor = '#e2e8f0';
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleImageFile(file);
+    };
+  }
+
+  // 視訊鏡頭開關
   if (btnWebcam && webcamContainer) {
-    btnWebcam.addEventListener('click', () => {
+    btnWebcam.onclick = () => {
       const isVisible = webcamContainer.style.display !== 'none';
       if (isVisible) {
         webcamContainer.style.display = 'none';
@@ -690,22 +742,22 @@ function bindStep1Events() {
         webcamContainer.style.display = 'flex';
         startWebcam();
       }
-    });
+    };
   }
 
   const snapBtn = document.getElementById('btnSnapPhoto');
-  if (snapBtn) snapBtn.addEventListener('click', snapWebcamPhoto);
+  if (snapBtn) snapBtn.onclick = snapWebcamPhoto;
   const closeCamBtn = document.getElementById('btnCloseCamera');
   if (closeCamBtn && webcamContainer) {
-    closeCamBtn.addEventListener('click', () => {
+    closeCamBtn.onclick = () => {
       webcamContainer.style.display = 'none';
       stopWebcam();
-    });
+    };
   }
 
-  // Sample Avatars
+  // 示範頭像
   document.querySelectorAll('[data-sample]').forEach(btn => {
-    btn.addEventListener('click', () => loadSampleAvatar(btn.dataset.sample));
+    btn.onclick = () => loadSampleAvatar(btn.dataset.sample);
   });
 }
 
@@ -2538,13 +2590,14 @@ function clipFestivalShape(ctx, x, y, w, h, shape) {
 function drawBeforeAfterSplit(ctx, x, y, w, h, ratio) {
   const splitX = x + (w * ratio / 100);
 
-  // 1. Draw Original on left side
+  // 1. Draw Original on left side (prioritize raw user photo)
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, splitX - x, h);
   ctx.clip();
   ctx.filter = 'none';
-  drawImageCover(ctx, programState.userImage, x, y, w, h);
+  const originalPhoto = programState.rawUploadedImage || programState.userImage;
+  drawImageCover(ctx, originalPhoto, x, y, w, h);
   ctx.restore();
 
   // 2. Draw Filtered on right side
