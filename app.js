@@ -1084,6 +1084,18 @@ function bindFinalStepEvents() {
 }
 
 /* ================== GEMINI API 與 生圖核心運算模組 ================== */
+function openGeminiKeyModal() {
+  const modal = document.getElementById('geminiKeyModal');
+  const input = document.getElementById('geminiApiKeyInput');
+  if (input) input.value = localStorage.getItem('gemini_api_key') || '';
+  if (modal) modal.classList.add('active');
+}
+
+function closeGeminiKeyModal() {
+  const modal = document.getElementById('geminiKeyModal');
+  if (modal) modal.classList.remove('active');
+}
+
 function initGeminiStudio() {
   const btnOpenModal = document.getElementById('btnOpenGeminiModal');
   const modal = document.getElementById('geminiKeyModal');
@@ -1096,20 +1108,11 @@ function initGeminiStudio() {
 
   if (!modal) return;
 
-  const openKeyModal = () => {
-    if (input) input.value = localStorage.getItem('gemini_api_key') || '';
-    modal.classList.add('active');
-  };
-
-  const closeKeyModal = () => {
-    modal.classList.remove('active');
-  };
-
-  if (btnOpenModal) btnOpenModal.addEventListener('click', openKeyModal);
-  if (btnClose) btnClose.addEventListener('click', closeKeyModal);
-  if (btnCancel) btnCancel.addEventListener('click', closeKeyModal);
+  if (btnOpenModal) btnOpenModal.addEventListener('click', openGeminiKeyModal);
+  if (btnClose) btnClose.addEventListener('click', closeGeminiKeyModal);
+  if (btnCancel) btnCancel.addEventListener('click', closeGeminiKeyModal);
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeKeyModal();
+    if (e.target === modal) closeGeminiKeyModal();
   });
 
   if (btnToggleVis && input) {
@@ -1129,10 +1132,10 @@ function initGeminiStudio() {
       } else {
         localStorage.removeItem('gemini_api_key');
         programState.geminiApiKey = '';
-        showToast('已切換為「精選 AI 示範生圖模式」！', '✨');
+        showToast('已清除 API Key！', 'ℹ️');
       }
       updateGeminiStatusUI();
-      closeKeyModal();
+      closeGeminiKeyModal();
     });
   }
 
@@ -1141,9 +1144,9 @@ function initGeminiStudio() {
       localStorage.removeItem('gemini_api_key');
       programState.geminiApiKey = '';
       if (input) input.value = '';
-      showToast('已清除 API Key，已切換至免 Key 示範模式！', '🗑️');
+      showToast('已清除 API Key！', '🗑️');
       updateGeminiStatusUI();
-      closeKeyModal();
+      closeGeminiKeyModal();
     });
   }
 
@@ -1156,12 +1159,30 @@ function updateGeminiStatusUI() {
   const hasKey = !!(programState.geminiApiKey || localStorage.getItem('gemini_api_key'));
 
   if (statusText) {
-    statusText.innerText = hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Google Imagen 3 (免 Key 示範體驗)';
+    statusText.innerText = hasKey ? 'Google Imagen 3 (個人 Key 連線中)' : 'Google Gemini (尚未設定 Key)';
   }
   if (statusTag) {
-    statusTag.style.background = hasKey ? '#f0fdf4' : '#faf5ff';
-    statusTag.style.borderColor = hasKey ? '#86efac' : '#ddd6fe';
-    statusTag.style.color = hasKey ? '#166534' : '#6b21a8';
+    statusTag.style.background = hasKey ? '#f0fdf4' : '#fef2f2';
+    statusTag.style.borderColor = hasKey ? '#86efac' : '#fecaca';
+    statusTag.style.color = hasKey ? '#166534' : '#991b1b';
+  }
+
+  const megaTitle = document.getElementById('megaBtnTitle');
+  const megaSub = document.getElementById('megaBtnSubtitle');
+  const studentName = programState.currentProgram?.student_name || '專屬';
+  if (megaTitle) {
+    if (hasKey) {
+      megaTitle.innerHTML = `✨ 連線 Gemini 智能生圖【${studentName}】`;
+    } else {
+      megaTitle.innerHTML = `🔑 設定 Gemini API Key 啟動 AI 生圖`;
+    }
+  }
+  if (megaSub) {
+    if (hasKey) {
+      megaSub.innerHTML = '連線 Google Imagen 3 / Gemini 2.0 繪圖核心，依據規格與咒語即時生成真實 AI 旅拍大片！';
+    } else {
+      megaSub.innerHTML = '點擊設定您的 Google Gemini API Key，即可由 Google AI 生成真實旅拍大片！';
+    }
   }
 }
 
@@ -1273,8 +1294,56 @@ function composeGeminiPrompt() {
   return baseEn;
 }
 
+function getBase64FromImage(img) {
+  try {
+    if (!img) return null;
+    if (img.src && img.src.startsWith('data:image/')) {
+      const comma = img.src.indexOf(',');
+      const meta = img.src.substring(0, comma);
+      const mime = meta.match(/:(.*?);/)?.[1] || 'image/jpeg';
+      const data = img.src.substring(comma + 1);
+      return { mime, data };
+    }
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || img.width || 400;
+    c.height = img.naturalHeight || img.height || 500;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    const dataUrl = c.toDataURL('image/jpeg', 0.85);
+    const comma = dataUrl.indexOf(',');
+    const data = dataUrl.substring(comma + 1);
+    return { mime: 'image/jpeg', data };
+  } catch (e) {
+    console.warn('getBase64FromImage error:', e);
+    return null;
+  }
+}
+
+function fallbackToThemedSample() {
+  const loadingBox = document.getElementById('geminiLoadingBox');
+  if (loadingBox) loadingBox.style.display = 'none';
+  const samplePath = `assets/ai_samples/${programState.currentProgramId}.jpg`;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    programState.userImage = img;
+    renderCanvas();
+    showToast(`已載入【${programState.currentProgram?.student_name}】手稿高解析真實 AI 成果！`, '🎨');
+  };
+  img.src = samplePath;
+}
+
 async function executeGeminiGeneration() {
   if (programState.isGeminiGenerating) return;
+
+  const apiKey = (programState.geminiApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+
+  // 若使用者尚未輸入 API Key，立即主動彈出設定視窗並提示
+  if (!apiKey) {
+    showToast('🔑 請先輸入您的 Google Gemini API Key 以啟動真實 Gemini 智能生圖！', '🔑');
+    openGeminiKeyModal();
+    return;
+  }
 
   const promptInput = document.getElementById('geminiPromptInput');
   const prompt = (promptInput ? promptInput.value.trim() : programState.geminiPrompt) || composeGeminiPrompt();
@@ -1286,65 +1355,42 @@ async function executeGeminiGeneration() {
   programState.isGeminiGenerating = true;
   if (btnGenerate) btnGenerate.disabled = true;
   if (loadingBox) loadingBox.style.display = 'flex';
-
-  const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
   if (loadingText) {
-    loadingText.innerText = programState.isUserPhoto
-      ? '正在將您提供的個人照片與手稿主題進行 AI 智能風格重塑運算中...'
-      : (apiKey ? '正在連線 Google Gemini 智能生圖核心繪製中...' : '正在連線 Gemini AI 智能生圖引擎運算中...');
+    loadingText.innerHTML = `
+      <div style="font-weight: 700; color: #4338ca; font-size: 0.95rem;">
+        🚀 正在連線 Google Gemini 智能生圖核心（Imagen 3 / Gemini 2.0）...
+      </div>
+      <div style="font-size: 0.82rem; color: #64748b; margin-top: 0.25rem;">
+        正在向 Google 官方伺服器發送生圖運算請求，請稍候約 3~8 秒...
+      </div>
+    `;
   }
 
+  const sourcePhoto = programState.rawUploadedImage || (programState.isUserPhoto ? programState.userImage : null);
+
   try {
-    let imgDataUrl = '';
-    let usedMethod = '';
+    // 真正呼叫 Google Gemini / Imagen 3 官方遠端生圖 API！
+    const geminiResult = await callGeminiImageApi(prompt, ratio, apiKey, sourcePhoto);
 
-    // 核心判斷：若使用者已上傳自己的照片或選取範例頭像，必須以使用者提供的相片為主角！
-    const sourcePhoto = programState.rawUploadedImage || (programState.isUserPhoto ? programState.userImage : null);
-    
-    if (sourcePhoto) {
-      // 依據使用者上傳的照片進行 AI 旅拍大片風格轉化
-      await new Promise(r => setTimeout(r, 850));
-      imgDataUrl = await generateAiImageFromUserPhoto(sourcePhoto, programState.currentProgramId, prompt);
-      usedMethod = programState.isUserPhoto ? 'user_photo_ai' : 'sample_photo_ai';
-    } else if (apiKey) {
-      // 若使用者未傳照片且有 API Key，嘗試 Imagen / Gemini API 生成
-      try {
-        const geminiResult = await callGeminiImageApi(prompt, ratio, apiKey);
-        if (geminiResult && geminiResult.dataUrl) {
-          imgDataUrl = geminiResult.dataUrl;
-          usedMethod = 'direct_gemini';
-        } else if (geminiResult && geminiResult.refinedPrompt) {
-          if (promptInput) promptInput.value = geminiResult.refinedPrompt;
-          programState.geminiPrompt = geminiResult.refinedPrompt;
-          imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, geminiResult.refinedPrompt, ratio);
-          usedMethod = 'gemini_verified';
-        }
-      } catch (apiErr) {
-        console.warn('Gemini API call returned:', apiErr);
-        imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
-        usedMethod = 'fallback_ai';
-      }
-    } else {
-      // 未上傳照片且無 Key：載入真實手稿展示照片
-      await new Promise(r => setTimeout(r, 800));
-      imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
-      usedMethod = 'demo_ai';
+    if (!geminiResult || !geminiResult.dataUrl) {
+      throw new Error('Google Gemini API 未能回傳影像資料');
     }
 
-    if (!imgDataUrl) {
-      imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
-    }
+    const imgDataUrl = geminiResult.dataUrl;
+    const engineName = geminiResult.engine || 'Google Gemini AI';
 
-    // 將產出的 AI 成果載入為當前畫布相片
+    // 成功取得由 Google Gemini 生成的真實圖片，套用至畫布海報
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       programState.userImage = img;
       renderCanvas();
+
       programState.geminiHistory.unshift({
         url: imgDataUrl,
         prompt: prompt,
-        time: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+        time: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
+        engine: engineName
       });
       if (programState.geminiHistory.length > 8) programState.geminiHistory.pop();
 
@@ -1357,101 +1403,202 @@ async function executeGeminiGeneration() {
         bindHistoryThumbClicks();
       }
 
-      if (usedMethod === 'user_photo_ai') {
-        showToast('🎉 已成功將您提供的照片生成專屬 AI 旅拍圖片！已套入海報！', '✨');
-      } else if (usedMethod === 'sample_photo_ai') {
-        showToast('🎉 已成功將範例人物照片生成【' + programState.currentProgram.student_name + '】AI 旅拍圖片！', '✨');
-      } else if (usedMethod === 'direct_gemini') {
-        showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
-      } else if (usedMethod === 'gemini_verified') {
-        showToast('🎉 Gemini API 驗證成功！已透過 AI 智能優化提示詞並生成專屬旅拍照片！', '✨');
-      } else {
-        showToast(`✨ 已依據【${programState.currentProgram.student_name}】手稿規格成功生成超寫實 AI 旅拍照片！`, '✨');
-      }
+      showToast(`🎉 成功由 ${engineName} 生成真實 AI 旅拍照片！已套入海報！`, '✨');
+      if (loadingBox) loadingBox.style.display = 'none';
     };
     img.src = imgDataUrl;
 
-  } catch (err) {
-    showToast(`生圖提示：${err.message}`, 'ℹ️');
+  } catch (apiErr) {
+    console.error('Gemini API Error:', apiErr);
+    showToast(`❌ Gemini 生圖失敗：${apiErr.message}`, '⚠️');
+    if (loadingText) {
+      loadingText.innerHTML = `
+        <div style="color: #ef4444; font-weight: 700; font-size: 0.95rem;">
+          ❌ Google Gemini 生圖失敗：${escapeHtml(apiErr.message)}
+        </div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem; line-height: 1.5;">
+          常見原因：API Key 無效、Google AI Studio 免費額度限制 (429) 或尚未啟用 Imagen 權限。<br>
+          您可 <a href="javascript:void(0)" onclick="openGeminiKeyModal()" style="color: #4f46e5; font-weight: bold; text-decoration: underline;">點此重新檢查/更換 API Key</a>，或 <a href="javascript:void(0)" onclick="fallbackToThemedSample()" style="color: #059669; font-weight: bold; text-decoration: underline;">使用手稿高解析真實 AI 成果預覽</a>。
+        </div>
+      `;
+    }
   } finally {
     programState.isGeminiGenerating = false;
     if (btnGenerate) btnGenerate.disabled = false;
-    if (loadingBox) loadingBox.style.display = 'none';
   }
 }
 
-async function callGeminiImageApi(prompt, ratio, apiKey) {
+async function callGeminiImageApi(prompt, ratio, apiKey, sourcePhoto) {
   let ar = '3:4';
   if (ratio === '1:1') ar = '1:1';
   else if (ratio === '4:3') ar = '4:3';
   else if (ratio === '16:9') ar = '16:9';
 
-  // 1. Try Imagen 3 predict endpoint
+  let lastErrorMsg = '';
+
+  // 策略 1: Google Imagen 3 (imagen-3.0-generate-002:predict) - 官方頂級生圖模型
   try {
-    const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${encodeURIComponent(apiKey)}`;
     const imagenBody = {
       instances: [{ prompt: prompt }],
       parameters: { sampleCount: 1, aspectRatio: ar, personGeneration: 'ALLOW_ADULT' }
     };
     const res = await fetch(imagenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
       body: JSON.stringify(imagenBody)
     });
+
     if (res.ok) {
       const data = await res.json();
       if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
-        return { dataUrl: `data:${data.predictions[0].mimeType || 'image/jpeg'};base64,${data.predictions[0].bytesBase64Encoded}` };
+        return {
+          dataUrl: `data:${data.predictions[0].mimeType || 'image/jpeg'};base64,${data.predictions[0].bytesBase64Encoded}`,
+          engine: 'Google Imagen 3'
+        };
       }
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      lastErrorMsg = errJson.error?.message || `Imagen 3 HTTP ${res.status}`;
+      console.warn('Imagen 3 API returned error:', lastErrorMsg);
     }
   } catch (e) {
-    console.log('Imagen 3 endpoint not available:', e);
+    lastErrorMsg = e.message || String(e);
+    console.warn('Imagen 3 fetch failed:', e);
   }
 
-  // 2. Try Gemini 2.0 multimodal image generation endpoint
+  // 策略 2: Google Imagen 3 Fast (imagen-3.0-fast-generate-001:predict) - 官方快速生圖模型
   try {
-    const multiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
-    const multiBody = {
-      contents: [{ parts: [{ text: "Generate a realistic travel photograph of: " + prompt }] }],
-      generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+    const fastUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:predict?key=${encodeURIComponent(apiKey)}`;
+    const fastBody = {
+      instances: [{ prompt: prompt }],
+      parameters: { sampleCount: 1, aspectRatio: ar, personGeneration: 'ALLOW_ADULT' }
     };
-    const res = await fetch(multiUrl, {
+    const res = await fetch(fastUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(multiBody)
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify(fastBody)
     });
+
     if (res.ok) {
       const data = await res.json();
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      for (const p of parts) {
-        if (p.inlineData && p.inlineData.data) {
-          return { dataUrl: `data:${p.inlineData.mimeType || 'image/jpeg'};base64,${p.inlineData.data}` };
-        }
+      if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return {
+          dataUrl: `data:${data.predictions[0].mimeType || 'image/jpeg'};base64,${data.predictions[0].bytesBase64Encoded}`,
+          engine: 'Google Imagen 3 Fast'
+        };
       }
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      lastErrorMsg = errJson.error?.message || `Imagen 3 Fast HTTP ${res.status}`;
     }
   } catch (e) {
-    console.log('Multimodal endpoint not available:', e);
+    console.warn('Imagen 3 Fast fetch failed:', e);
   }
 
-  // 3. Verify API Key with Gemini 1.5 Flash and refine prompt
-  const verifyUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const verifyBody = {
-    contents: [{ parts: [{ text: "You are a professional travel photographer. Expand and refine this prompt into a vivid 25-word English photo prompt for travel poster: " + prompt }] }]
-  };
-  const vRes = await fetch(verifyUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(verifyBody)
-  });
+  // 策略 3: Gemini 2.0 Flash 多模態生圖 (gemini-2.0-flash-exp:generateContent) - 支援圖片輸入與免費層
+  try {
+    const multiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const parts = [];
 
-  if (!vRes.ok) {
-    const errData = await vRes.json().catch(() => ({}));
-    throw new Error(errData.error?.message || `HTTP ${vRes.status}`);
+    // 若使用者上傳相片，透過 Base64 傳入 Gemini 多模態影像轉化
+    if (sourcePhoto) {
+      const base64Info = getBase64FromImage(sourcePhoto);
+      if (base64Info && base64Info.data) {
+        parts.push({
+          inlineData: {
+            mimeType: base64Info.mime,
+            data: base64Info.data
+          }
+        });
+        parts.push({
+          text: `Based on this traveler photo, generate a hyper-realistic cinematic travel photograph matching this prompt: ${prompt}`
+        });
+      } else {
+        parts.push({
+          text: `Generate a photorealistic 8k travel photograph of: ${prompt}`
+        });
+      }
+    } else {
+      parts.push({
+        text: `Generate a photorealistic 8k travel photograph of: ${prompt}`
+      });
+    }
+
+    const multiBody = {
+      contents: [{ parts: parts }],
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"]
+      }
+    };
+
+    const res = await fetch(multiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify(multiBody)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const candidateParts = data.candidates?.[0]?.content?.parts || [];
+      for (const part of candidateParts) {
+        if (part.inlineData && part.inlineData.data) {
+          return {
+            dataUrl: `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`,
+            engine: 'Google Gemini 2.0 Flash'
+          };
+        }
+      }
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      lastErrorMsg = errJson.error?.message || `Gemini 2.0 HTTP ${res.status}`;
+    }
+  } catch (e) {
+    console.warn('Gemini 2.0 fetch failed:', e);
   }
 
-  const vData = await vRes.json();
-  const refinedText = vData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || prompt;
-  return { refinedPrompt: refinedText };
+  // 策略 4: Google Imagen 3 v1 (imagen-3.0-generate-001:predict)
+  try {
+    const v1Url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${encodeURIComponent(apiKey)}`;
+    const v1Body = {
+      instances: [{ prompt: prompt }],
+      parameters: { sampleCount: 1, aspectRatio: ar }
+    };
+    const res = await fetch(v1Url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify(v1Body)
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.predictions && data.predictions[0]?.bytesBase64Encoded) {
+        return {
+          dataUrl: `data:${data.predictions[0].mimeType || 'image/jpeg'};base64,${data.predictions[0].bytesBase64Encoded}`,
+          engine: 'Google Imagen 3 (v1)'
+        };
+      }
+    } else {
+      const errJson = await res.json().catch(() => ({}));
+      lastErrorMsg = errJson.error?.message || `Imagen v1 HTTP ${res.status}`;
+    }
+  } catch (e) {
+    console.warn('Imagen v1 fetch failed:', e);
+  }
+
+  throw new Error(lastErrorMsg || 'Google 生圖 API 未能回傳圖片，請確認 API Key 是否有效。');
 }
 
 /* --- 個人上傳相片之 AI 風格融合重塑生成器 (以使用者照片為唯一主角，不疊加陌生人示範圖) --- */
