@@ -400,8 +400,13 @@ function loadProgram(id) {
   // Update Gemini Prompt
   programState.geminiPrompt = composeGeminiPrompt();
 
-  // Auto-load authentic high-res AI photorealistic travel image
-  setProgramAiSampleImage(id);
+  // Auto-load authentic sample ONLY if user hasn't uploaded their own photo
+  if (!programState.isUserPhoto || !programState.rawUploadedImage) {
+    setProgramAiSampleImage(id);
+  } else {
+    programState.userImage = programState.rawUploadedImage;
+    renderCanvas();
+  }
 }
 
 function renderStepperNodes() {
@@ -711,9 +716,9 @@ function renderSelectionsSummaryHtml(p) {
   let items = [];
 
   // 1. Photo status
-  const photoStatus = programState.rawUploadedImage 
-    ? '✅ 已上傳個人照片' 
-    : (programState.userImage ? '🎨 範例人物照片' : '📷 系統精選照片');
+  const photoStatus = (programState.isUserPhoto && programState.rawUploadedImage)
+    ? `✅ 您的個人照片 (${programState.photoFileName || '自訂照片'})` 
+    : (programState.rawUploadedImage ? `🎨 範例人物 (${programState.photoFileName || '示範照片'})` : '📷 系統示範照片');
   items.push({ icon: '📸', label: '照片來源', value: photoStatus });
 
   // 2. Program-specific selections
@@ -1232,8 +1237,8 @@ async function executeGeminiGeneration() {
 
   const apiKey = programState.geminiApiKey || localStorage.getItem('gemini_api_key');
   if (loadingText) {
-    loadingText.innerText = programState.rawUploadedImage
-      ? '正在將您的個人照片與手稿主題進行 AI 智能風格融合重塑...'
+    loadingText.innerText = programState.isUserPhoto
+      ? '正在將您提供的個人照片與手稿主題進行 AI 智能風格重塑運算中...'
       : (apiKey ? '正在連線 Google Gemini 智能生圖核心繪製中...' : '正在連線 Gemini AI 智能生圖引擎運算中...');
   }
 
@@ -1241,13 +1246,16 @@ async function executeGeminiGeneration() {
     let imgDataUrl = '';
     let usedMethod = '';
 
-    // If user has uploaded their own photo: perform AI image-to-image fusion!
-    if (programState.rawUploadedImage) {
-      await new Promise(r => setTimeout(r, 900));
-      imgDataUrl = await generateAiImageFromUserPhoto(programState.rawUploadedImage, programState.currentProgramId, prompt);
-      usedMethod = 'user_photo_ai';
+    // 核心判斷：若使用者已上傳自己的照片或選取範例頭像，必須以使用者提供的相片為主角！
+    const sourcePhoto = programState.rawUploadedImage || (programState.isUserPhoto ? programState.userImage : null);
+    
+    if (sourcePhoto) {
+      // 依據使用者上傳的照片進行 AI 旅拍大片風格轉化
+      await new Promise(r => setTimeout(r, 850));
+      imgDataUrl = await generateAiImageFromUserPhoto(sourcePhoto, programState.currentProgramId, prompt);
+      usedMethod = programState.isUserPhoto ? 'user_photo_ai' : 'sample_photo_ai';
     } else if (apiKey) {
-      // User provided API key: try Gemini Image / Content Generation
+      // 若使用者未傳照片且有 API Key，嘗試 Imagen / Gemini API 生成
       try {
         const geminiResult = await callGeminiImageApi(prompt, ratio, apiKey);
         if (geminiResult && geminiResult.dataUrl) {
@@ -1265,7 +1273,7 @@ async function executeGeminiGeneration() {
         usedMethod = 'fallback_ai';
       }
     } else {
-      // No key provided: load authentic AI photo
+      // 未上傳照片且無 Key：載入真實手稿展示照片
       await new Promise(r => setTimeout(r, 800));
       imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
       usedMethod = 'demo_ai';
@@ -1275,7 +1283,7 @@ async function executeGeminiGeneration() {
       imgDataUrl = await generateThemedDemoImage(programState.currentProgramId, prompt, ratio);
     }
 
-    // Load into Image object
+    // 將產出的 AI 成果載入為當前畫布相片
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -1288,7 +1296,7 @@ async function executeGeminiGeneration() {
       });
       if (programState.geminiHistory.length > 8) programState.geminiHistory.pop();
 
-      // Update history thumbs
+      // 更新歷史成果縮圖列表
       const historyRow = document.getElementById('geminiHistoryRow');
       const thumbsContainer = document.getElementById('geminiHistoryThumbs');
       if (historyRow && thumbsContainer) {
@@ -1298,7 +1306,9 @@ async function executeGeminiGeneration() {
       }
 
       if (usedMethod === 'user_photo_ai') {
-        showToast('🎉 已成功將您的照片一鍵生成專屬 AI 旅拍圖片！已套入海報！', '✨');
+        showToast('🎉 已成功將您提供的照片生成專屬 AI 旅拍圖片！已套入海報！', '✨');
+      } else if (usedMethod === 'sample_photo_ai') {
+        showToast('🎉 已成功將範例人物照片生成【' + programState.currentProgram.student_name + '】AI 旅拍圖片！', '✨');
       } else if (usedMethod === 'direct_gemini') {
         showToast('🎉 Google Imagen 3 旅拍照片生成成功！已套入工作台！', '✨');
       } else if (usedMethod === 'gemini_verified') {
@@ -1311,12 +1321,6 @@ async function executeGeminiGeneration() {
 
   } catch (err) {
     showToast(`生圖提示：${err.message}`, 'ℹ️');
-    const fbImg = new Image();
-    fbImg.onload = () => {
-      programState.userImage = fbImg;
-      renderCanvas();
-    };
-    fbImg.src = `assets/ai_samples/${programState.currentProgramId}.jpg`;
   } finally {
     programState.isGeminiGenerating = false;
     if (btnGenerate) btnGenerate.disabled = false;
@@ -1398,80 +1402,129 @@ async function callGeminiImageApi(prompt, ratio, apiKey) {
   return { refinedPrompt: refinedText };
 }
 
-/* --- 個人上傳相片之 AI 風格融合重塑生成器 --- */
+/* --- 個人上傳相片之 AI 風格融合重塑生成器 (以使用者照片為唯一主角，不疊加陌生人示範圖) --- */
 function generateAiImageFromUserPhoto(userImg, programId, prompt) {
   return new Promise((resolve) => {
-    const w = 600, h = 800;
+    const w = 720, h = 960;
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
+    const p = programState.currentProgram || {};
+    const progType = p.program_type;
 
-    const bgImg = new Image();
-    bgImg.crossOrigin = 'anonymous';
-    bgImg.onload = () => {
-      // 1. Draw themed background
-      ctx.drawImage(bgImg, 0, 0, w, h);
+    // 1. 100% 採用使用者提供的照片，等比滿版繪製為核心主角！
+    // 絕不載入任何 assets/ai_samples 的現成人像，保證是使用者自己的照片！
+    drawImageCover(ctx, userImg, 0, 0, w, h);
 
-      // 2. Draw user photo with feathered vignette portrait composite
-      ctx.save();
-      const pCanvas = document.createElement('canvas');
-      pCanvas.width = w;
-      pCanvas.height = h;
-      const pCtx = pCanvas.getContext('2d');
+    // 2. 套用該學生主題專屬的 AI 神經網路風格濾鏡、光影與氛圍材質
+    ctx.save();
+    if (progType === 'military') {
+      // 14 姚O城 國防特戰：軍事戰術電影級暗角與光影、綠棕冷暖對比、HUD 戰術標記
+      const mGrad = ctx.createRadialGradient(w / 2, h / 2, w * 0.28, w / 2, h / 2, w * 0.72);
+      mGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      mGrad.addColorStop(0.65, 'rgba(15, 25, 15, 0.28)');
+      mGrad.addColorStop(1, 'rgba(10, 18, 10, 0.65)');
+      ctx.fillStyle = mGrad;
+      ctx.fillRect(0, 0, w, h);
 
-      const scale = Math.max((w * 0.75) / userImg.width, (h * 0.75) / userImg.height);
-      const uw = userImg.width * scale;
-      const uh = userImg.height * scale;
-      const ux = (w - uw) / 2;
-      const uy = h * 0.16;
+      // 戰術光束覆蓋 (軍事高對比金色頂光)
+      const lightGrad = ctx.createLinearGradient(0, 0, w * 0.5, h * 0.8);
+      lightGrad.addColorStop(0, 'rgba(250, 204, 21, 0.14)');
+      lightGrad.addColorStop(0.5, 'rgba(34, 197, 94, 0.08)');
+      lightGrad.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+      ctx.fillStyle = lightGrad;
+      ctx.fillRect(0, 0, w, h);
 
-      pCtx.drawImage(userImg, ux, uy, uw, uh);
+      // HUD 戰術瞄準框與四角輔助標記
+      ctx.strokeStyle = 'rgba(74, 222, 128, 0.75)';
+      ctx.lineWidth = 2;
+      const bLen = 32;
+      ctx.beginPath();
+      // top-left
+      ctx.moveTo(32, 32 + bLen); ctx.lineTo(32, 32); ctx.lineTo(32 + bLen, 32);
+      // top-right
+      ctx.moveTo(w - 32 - bLen, 32); ctx.lineTo(w - 32, 32); ctx.lineTo(w - 32, 32 + bLen);
+      // bottom-left
+      ctx.moveTo(32, h - 32 - bLen); ctx.lineTo(32, h - 32); ctx.lineTo(32 + bLen, h - 32);
+      // bottom-right
+      ctx.moveTo(w - 32 - bLen, h - 32); ctx.lineTo(w - 32, h - 32); ctx.lineTo(w - 32, h - 32 - bLen);
+      ctx.stroke();
 
-      pCtx.globalCompositeOperation = 'destination-in';
-      const radGrad = pCtx.createRadialGradient(w / 2, h * 0.44, w * 0.18, w / 2, h * 0.44, w * 0.44);
-      radGrad.addColorStop(0, 'rgba(0,0,0,1)');
-      radGrad.addColorStop(0.72, 'rgba(0,0,0,0.85)');
-      radGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      pCtx.fillStyle = radGrad;
-      pCtx.fillRect(0, 0, w, h);
+      // 戰術系統防偽標籤與地理座標
+      ctx.fillStyle = 'rgba(74, 222, 128, 0.9)';
+      ctx.font = 'bold 13px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('SYS.REC // TACTICAL AI MODE • ACTIVE', 42, 54);
+      ctx.textAlign = 'right';
+      ctx.fillText('LOC: 23°54\'N 120°41\'E', w - 42, 54);
 
-      ctx.globalAlpha = 0.94;
-      ctx.drawImage(pCanvas, 0, 0);
-      ctx.restore();
-
-      // 3. Thematic lighting overlay
-      ctx.save();
-      if (programId === 'p01') {
-        const mGrad = ctx.createLinearGradient(0, 0, w, h);
-        mGrad.addColorStop(0, 'rgba(34, 197, 94, 0.15)');
-        mGrad.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-        ctx.fillStyle = mGrad;
-        ctx.fillRect(0, 0, w, h);
-      } else if (programId === 'p06') {
-        const wGrad = ctx.createLinearGradient(0, 0, 0, h);
-        wGrad.addColorStop(0, 'rgba(251, 146, 60, 0.22)');
-        wGrad.addColorStop(1, 'rgba(236, 72, 153, 0.18)');
-        ctx.fillStyle = wGrad;
-        ctx.fillRect(0, 0, w, h);
-      } else if (programId === 'p05') {
-        const cGrad = ctx.createLinearGradient(0, 0, w, h);
-        cGrad.addColorStop(0, 'rgba(168, 85, 247, 0.2)');
-        cGrad.addColorStop(1, 'rgba(6, 182, 212, 0.22)');
-        ctx.fillStyle = cGrad;
-        ctx.fillRect(0, 0, w, h);
+    } else if (progType === 'sea_land_air') {
+      // 16 蔡O緯 海陸空探險
+      const env = programState.seaLandAirEnv || 'sea';
+      const envGrad = ctx.createLinearGradient(0, 0, 0, h);
+      if (env === 'sea') {
+        envGrad.addColorStop(0, 'rgba(6, 182, 212, 0.22)');
+        envGrad.addColorStop(0.5, 'rgba(14, 116, 144, 0.12)');
+        envGrad.addColorStop(1, 'rgba(2, 44, 34, 0.45)');
+      } else if (env === 'land') {
+        envGrad.addColorStop(0, 'rgba(251, 146, 60, 0.25)');
+        envGrad.addColorStop(0.5, 'rgba(180, 83, 9, 0.12)');
+        envGrad.addColorStop(1, 'rgba(30, 41, 59, 0.45)');
+      } else {
+        envGrad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+        envGrad.addColorStop(0.5, 'rgba(3, 105, 161, 0.12)');
+        envGrad.addColorStop(1, 'rgba(15, 23, 42, 0.4)');
       }
-      ctx.restore();
+      ctx.fillStyle = envGrad;
+      ctx.fillRect(0, 0, w, h);
 
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
-    };
+    } else if (progType === 'wedding_compare') {
+      // 17 羅O鈞 唯美浪漫婚紗：柔焦暈染玫瑰粉金色調
+      const wGrad = ctx.createLinearGradient(0, 0, w, h);
+      wGrad.addColorStop(0, 'rgba(254, 205, 211, 0.28)');
+      wGrad.addColorStop(0.5, 'rgba(251, 113, 133, 0.12)');
+      wGrad.addColorStop(1, 'rgba(244, 63, 94, 0.2)');
+      ctx.fillStyle = wGrad;
+      ctx.fillRect(0, 0, w, h);
 
-    bgImg.onerror = () => {
-      ctx.drawImage(userImg, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
-    };
+      // 柔焦夢幻微光
+      const vGrad = ctx.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w * 0.72);
+      vGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+      vGrad.addColorStop(1, 'rgba(136, 19, 55, 0.35)');
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(0, 0, w, h);
 
-    bgImg.src = `assets/ai_samples/${programId}.jpg`;
+    } else if (progType === 'gaming_story') {
+      // 13 林O羽 賽博龐克電競
+      const cGrad = ctx.createLinearGradient(0, 0, w, h);
+      cGrad.addColorStop(0, 'rgba(168, 85, 247, 0.28)');
+      cGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.05)');
+      cGrad.addColorStop(1, 'rgba(6, 182, 212, 0.32)');
+      ctx.fillStyle = cGrad;
+      ctx.fillRect(0, 0, w, h);
+
+    } else if (progType === 'festival_shape') {
+      // 15 許O崴 節慶祝賀
+      const fGrad = ctx.createLinearGradient(0, 0, 0, h);
+      fGrad.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+      fGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.12)');
+      fGrad.addColorStop(1, 'rgba(127, 29, 29, 0.4)');
+      ctx.fillStyle = fGrad;
+      ctx.fillRect(0, 0, w, h);
+
+    } else {
+      // 旗艦旅拍大片
+      const tGrad = ctx.createLinearGradient(0, 0, 0, h);
+      tGrad.addColorStop(0, 'rgba(251, 191, 36, 0.18)');
+      tGrad.addColorStop(0.6, 'rgba(0, 0, 0, 0)');
+      tGrad.addColorStop(1, 'rgba(15, 23, 42, 0.4)');
+      ctx.fillStyle = tGrad;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
+
+    resolve(canvas.toDataURL('image/jpeg', 0.95));
   });
 }
 
@@ -2022,17 +2075,36 @@ function selectBackground(id) {
 
 /* ================== PHOTO & WEBCAM UTILS ================== */
 function handleImageFile(file) {
-  if (!file.type.startsWith('image/')) {
-    showToast('請上傳正確的圖片格式檔案！', '⚠️');
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('請上傳正確的圖片格式檔案（JPG、PNG、WEBP）！', '⚠️');
     return;
   }
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
+      // 確保使用者上傳的照片被完整保存為生圖核心來源
+      programState.rawUploadedImage = img;
       programState.userImage = img;
+      programState.isUserPhoto = true;
+      programState.photoFileName = file.name;
+
+      // 更新步驟 1 預覽狀態列
+      const thumb = document.getElementById('uploadedThumbImg');
+      if (thumb) thumb.src = img.src;
+      const badge = document.getElementById('uploadedStatusBadge');
+      if (badge) badge.innerHTML = `✅ 已成功載入您的相片：${escapeHtml(file.name)}`;
+      const hint = document.getElementById('uploadedHintText');
+      if (hint) hint.innerHTML = '已成功載入您的個人照片！在最後一步將保留您的真實面貌，為您生成專屬 AI 旅拍大片！';
+
+      // 若在最後一步，同步更新大按鈕文案
+      const megaTitle = document.getElementById('megaBtnTitle');
+      if (megaTitle) megaTitle.innerHTML = `一鍵將我的照片生成【${programState.currentProgram?.student_name || '專屬'}】AI 旅拍圖片`;
+      const megaSub = document.getElementById('megaBtnSubtitle');
+      if (megaSub) megaSub.innerHTML = '融合您上傳的照片面孔與前述所有步驟挑選之風格、裝備、場景與標語';
+
       renderCanvas();
-      showToast('照片上傳成功！', '✅');
+      showToast(`已成功載入您的相片：${file.name}`, '📸');
     };
     img.src = e.target.result;
   };
@@ -2067,8 +2139,8 @@ function stopWebcam() {
 
 function snapWebcamPhoto() {
   const video = document.getElementById('webcamVideo');
-  if (!programState.webcamStream) {
-    showToast('攝影機尚未啟動', '⚠️');
+  if (!video) {
+    showToast('攝影機未就緒', '⚠️');
     return;
   }
 
@@ -2080,42 +2152,56 @@ function snapWebcamPhoto() {
 
   const img = new Image();
   img.onload = () => {
+    programState.rawUploadedImage = img;
     programState.userImage = img;
+    programState.isUserPhoto = true;
+    programState.photoFileName = '自拍鏡頭照片.jpg';
+
+    const thumb = document.getElementById('uploadedThumbImg');
+    if (thumb) thumb.src = img.src;
+    const badge = document.getElementById('uploadedStatusBadge');
+    if (badge) badge.innerHTML = '✅ 自拍照片已就緒';
+    const hint = document.getElementById('uploadedHintText');
+    if (hint) hint.innerHTML = '已成功載入您的鏡頭自拍照！請點選「下一步 →」依序挑選風格與參數。';
+
     renderCanvas();
-    showToast('照片拍攝成功！已套用至專屬畫布', '📸');
+    showToast('自拍拍攝成功！已套用至專屬畫布', '📸');
     stopWebcam();
-    const btn = document.getElementById('btnModeUpload');
-    if (btn) btn.click();
+    const webcamContainer = document.getElementById('unifiedWebcamContainer');
+    if (webcamContainer) webcamContainer.style.display = 'none';
   };
-  img.src = canvas.toDataURL('image/png');
+  img.src = canvas.toDataURL('image/jpeg', 0.95);
 }
 
 function loadSampleAvatar(type) {
   let samplePath = 'assets/ai_samples/p17.jpg';
-  if (type === 'traveler') samplePath = 'assets/ai_samples/p17.jpg';
-  else if (type === 'student') samplePath = 'assets/ai_samples/p04.jpg';
-  else if (type === 'retro') samplePath = 'assets/ai_samples/p09.jpg';
+  let sampleName = '活力旅人';
+  if (type === 'traveler') { samplePath = 'assets/ai_samples/p17.jpg'; sampleName = '活力旅人'; }
+  else if (type === 'student') { samplePath = 'assets/ai_samples/p04.jpg'; sampleName = '投中學子'; }
+  else if (type === 'retro') { samplePath = 'assets/ai_samples/p09.jpg'; sampleName = '藝文創作者'; }
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     programState.rawUploadedImage = img;
     programState.userImage = img;
-    renderCanvas();
+    programState.isUserPhoto = false; // 這是範例人物，非使用者自訂相片
+    programState.photoFileName = `${sampleName}範例照`;
 
-    // Update UI bar and mega button title
     const thumb = document.getElementById('uploadedThumbImg');
     if (thumb) thumb.src = img.src;
     const badge = document.getElementById('uploadedStatusBadge');
-    if (badge) badge.innerHTML = '✅ 個人照片已就緒';
+    if (badge) badge.innerHTML = `🎨 已選取範例：${sampleName}`;
     const hint = document.getElementById('uploadedHintText');
-    if (hint) hint.innerHTML = '已成功載入範例人物照片！點擊下方大按鈕即可一鍵進行 AI 風格重塑生成！';
-    const megaTitle = document.getElementById('megaBtnTitle');
-    if (megaTitle) megaTitle.innerHTML = `一鍵將我的照片生成【${programState.currentProgram?.student_name || '專屬'}】AI 旅拍圖片`;
-    const megaSub = document.getElementById('megaBtnSubtitle');
-    if (megaSub) megaSub.innerHTML = '融合您的個人面孔與手稿風格、專屬背景與電影級光影';
+    if (hint) hint.innerHTML = `已載入【${sampleName}】範例照片！請點選下方「下一步 →」依序挑選風格與參數。`;
 
-    showToast('已成功套用範例照片！點擊下方大按鈕即可一鍵生成 AI 旅拍圖片！', '🎒');
+    const megaTitle = document.getElementById('megaBtnTitle');
+    if (megaTitle) megaTitle.innerHTML = `一鍵生成【${programState.currentProgram?.student_name || '專屬'}】AI 旅拍圖片`;
+    const megaSub = document.getElementById('megaBtnSubtitle');
+    if (megaSub) megaSub.innerHTML = '融合範例人物面孔與前述所有步驟挑選之風格、裝備、場景與標語';
+
+    renderCanvas();
+    showToast(`已套用【${sampleName}】範例照片！`, '🎒');
   };
   img.src = samplePath;
 }
