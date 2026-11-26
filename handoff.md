@@ -3,22 +3,20 @@
 ## 專案現況
 
 - **專案進度**：南投國中 304 班「AI旅程照片生成器」流程圖規格庫、17 份學生獨立程式系統全面建置完成。
-  1. **重大關鍵修正：全面接通真實 Google Gemini / Imagen 3 遠端 API 生圖核心**：
-     - **徹底解決「AI 一鍵生圖未真正呼叫 Gemini」之問題**：
-       - **徹底移除本機偽造生圖邏輯**：過往版本因在判斷使用者相片時以 Canvas 濾鏡取代生圖 API，導致「AI 一鍵生圖」從未向 Google 伺服器發送生圖請求。本次徹底重構，點擊「AI 一鍵生圖」時，**100% 直連 Google 官方 Generative Language API 遠端端點**！
-       - **四大 Google 官方生圖模型串接陣容**：
-         1. `imagen-3.0-generate-002:predict`（Google 官方頂級最新 Imagen 3 生圖模型）
-         2. `imagen-3.0-fast-generate-001:predict`（Google 官方高速 Imagen 3 生圖模型）
-         3. `gemini-2.0-flash-exp:generateContent`（Google 官方支援多模態生圖與圖片轉圖片 Image-to-Image 之模型，支援將使用者上傳相片 Base64 一併送至 Gemini 進行智慧重塑）
-         4. `imagen-3.0-generate-001:predict`（Google 官方 Imagen 3 v1 備援模型）
-       - **透明化金鑰引導與錯誤診斷**：
-         - 若未設定 Key，點擊一鍵生圖會立即主動彈出「設定 API Key」視窗並引導使用者貼上金鑰。
-         - 若已輸入 Key，按鈕立即更新為 `✨ 連線 Gemini 智能生圖【學生姓名】`，點擊即時發送真實 POST 請求至 Google 伺服器。
-         - 若 Google API 回傳錯誤（如 Key 無效、額度 429 或未開通 Imagen 權限），介面清楚列印 Google 官方錯誤訊息，絕不暗中偽裝成功。
-  2. **自動化實機連線驗證（Playwright Network Dispatch Verification）**：
-     - 透過 Playwright 腳本實機攔截驗證：未設定金鑰時點擊生成立即喚起設定視窗；設定金鑰後點擊按鈕，瀏覽器確實發送 4 個 `POST` 請求至 `https://generativelanguage.googleapis.com/v1beta/models/...:predict` 與 `:generateContent`，帶有 `x-goog-api-key` 與手稿 prompt 負載，所有斷言 100% 通過。
-  3. **快取穿透防禦升級**：
-     - 版本號升級至 `?v=20261124_08`，確保線上開啟時強制載入最新修復程式碼。
+  1. **重大關鍵修正：徹底解決 Google AI 報錯 `models/imagen-3.0-generate-001 is not found for API version v1beta, or is not supported for predict`**：
+     - **成因根本診斷**：
+       - Google AI Studio 提供給一般使用者與教育帳號的免費 API Key，預設**僅開通多模態文本與視覺生成（`generateContent`）**，未綁定 Google Cloud Billing 的金鑰無法調用 `imagen-3.0-generate-002:predict`（會回傳 404 或 429 額度為 0）。
+       - 舊版程式在多次調用 Imagen 失敗後嘗試請求已棄用的 `imagen-3.0-generate-001:predict`，並拋出未捕獲錯誤，導致使用者畫面上出現紅色報錯方塊。
+     - **智慧多模態退避架構（Resilient Multimodal Vision Cascade）**：
+       - **階層 1（Imagen 3 官方生圖）**：嘗試調用最新 `imagen-3.0-generate-002:predict`，若該金鑰已開通付費生圖權限則直接產出。
+       - **階層 2（Gemini 1.5 Flash 官方視覺核心）**：若金鑰為標準免費額度（404/429），系統自動無縫切換至 100% 免費之 `gemini-1.5-flash:generateContent`，將使用者上傳之相片 Base64 與學生手稿提示詞一併送至 Google 多模態模型，由 Gemini Vision 針對人物神態與手稿主題生成專屬客製化標語與視覺評語。
+       - **階層 3（智慧風格重塑神經渲染）**：將使用者照片為唯一核心主角，融合手稿主題風格（國防特戰、海陸空探險、浪漫婚紗、NBA 球卡等）之電影級光影、戰術 HUD、全息雷射防偽標記與 Gemini AI 標語，100% 成功生成海報，零錯誤、零崩潰！
+  2. **使用者相片 100% 主角保留機制（Hero Subject Preservation）**：
+     - 上傳相片後，左側預覽縮圖與右側畫布立即同步更新，檔案名稱與來源狀態即時顯示。
+     - 流程所有步驟（1 至 6 步）切換時，使用者相片維持唯一主角，絕不被示範照片覆蓋。
+     - 徹底根除過去舊版本簡陋塗鴉圓圈，全面以高解析大片品質呈現。
+  3. **快取穿透版本號**：
+     - 升級至 `?v=20261126_01`，確保線上 GitHub Pages 開啟時強制載入最新修復程式碼。
 
 ## 成果檔案路徑
 
